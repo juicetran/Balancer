@@ -1,0 +1,1842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Balancer" />
+  <title>The Balancer</title>
+
+  <!--
+  ═══════════════════════════════════════════════════════════════
+  THE BALANCER — ADHD-Friendly Internal Audit Productivity Tool
+  ═══════════════════════════════════════════════════════════════
+  Single file. All state stored in localStorage (survives refresh).
+  Host on GitHub Pages — it's a static file, zero backend needed.
+
+  TO ADD A TASK: Use the Tasks tab in the app itself.
+  TO CHANGE SETTINGS: Budget tab → weekly settings section.
+  TO CHANGE CODE: Edit this file. Sections are clearly marked.
+
+  FOR FULL PWA INSTALL ON ANDROID:
+  Create a separate sw.js file in the same repo folder with the
+  contents from the SW_CODE string near the bottom of this file.
+  Then uncomment the "navigator.serviceWorker.register('/sw.js')"
+  line and delete the blob-URL registration block.
+  ═══════════════════════════════════════════════════════════════
+  -->
+
+  <!-- Fonts: IBM Plex Mono for timer/numbers, Syne for UI -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── DESIGN TOKENS ───────────────────────────────────── */
+    :root {
+      --bg:          #F5F2EC;
+      --bg2:         #ECEAE3;
+      --bg3:         #E1DED6;
+      --text:        #1C1B18;
+      --text2:       #56544E;
+      --text3:       #9C9A92;
+      --accent:      #0A5740;
+      --accent2:     #DCF0E8;
+      --warn:        #B45309;
+      --warn2:       #FEF3C0;
+      --danger:      #B91C1C;
+      --danger2:     #FEE2E2;
+      --info:        #1D4ED8;
+      --info2:       #DBEAFE;
+      --border:      rgba(28,27,24,0.09);
+      --border2:     rgba(28,27,24,0.16);
+      --mono:        'IBM Plex Mono', ui-monospace, monospace;
+      --sans:        'Syne', system-ui, sans-serif;
+      --r:           10px;
+      --r-sm:        6px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:        #141311;
+        --bg2:       #1D1C19;
+        --bg3:       #252420;
+        --text:      #F0EDE5;
+        --text2:     #B5B2A9;
+        --text3:     #6E6B63;
+        --accent:    #10B981;
+        --accent2:   #052E1C;
+        --warn:      #F59E0B;
+        --warn2:     #271A03;
+        --danger:    #EF4444;
+        --danger2:   #2A0909;
+        --info:      #60A5FA;
+        --info2:     #0D1F3C;
+        --border:    rgba(240,237,229,0.07);
+        --border2:   rgba(240,237,229,0.14);
+      }
+    }
+
+    /* ── RESET ───────────────────────────────────────────── */
+    *, *::before, *::after {
+      box-sizing: border-box; margin: 0; padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html { height: 100%; }
+
+    body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.5;
+      overscroll-behavior: none;
+    }
+
+    /* ── APP SHELL ───────────────────────────────────────── */
+    #app {
+      max-width: 430px;
+      margin: 0 auto;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ─────────────────────────────────────────── */
+    .hdr {
+      padding: env(safe-area-inset-top, 48px) 20px 0;
+      padding-top: max(env(safe-area-inset-top), 48px);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding-bottom: 14px;
+    }
+
+    .hdr-title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+      color: var(--text);
+    }
+
+    .hdr-title span {
+      color: var(--accent);
+    }
+
+    .wk-badge {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text3);
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      padding: 3px 8px;
+      border-radius: var(--r-sm);
+      letter-spacing: 0.06em;
+    }
+
+    /* ── TAB NAV ────────────────────────────────────────── */
+    .tab-nav {
+      display: flex;
+      border-bottom: 1px solid var(--border2);
+      background: var(--bg);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 11px 4px 10px;
+      background: none;
+      border: none;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text3);
+      cursor: pointer;
+      position: relative;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: color 0.15s;
+    }
+
+    .tab-btn.active { color: var(--text); }
+
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; left: 12%; right: 12%;
+      height: 2px;
+      background: var(--accent);
+      border-radius: 2px 2px 0 0;
+    }
+
+    /* ── SCROLL CONTENT ─────────────────────────────────── */
+    .tab-pane {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 16px max(24px, env(safe-area-inset-bottom, 24px));
+      display: none;
+    }
+
+    .tab-pane.active {
+      display: block;
+      animation: fadeUp 0.18s ease;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(5px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    /* ── CARDS ──────────────────────────────────────────── */
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 14px 15px;
+      margin-bottom: 10px;
+    }
+
+    .card-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 10px;
+    }
+
+    /* ── STATS GRID ─────────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .stat-cell {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 11px 10px 9px;
+      text-align: center;
+    }
+
+    .stat-val {
+      font-family: var(--mono);
+      font-size: 21px;
+      font-weight: 600;
+      line-height: 1;
+      color: var(--text);
+    }
+
+    .stat-val.c-danger { color: var(--danger); }
+    .stat-val.c-good   { color: var(--accent); }
+    .stat-val.c-warn   { color: var(--warn);   }
+
+    .stat-lbl {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-top: 4px;
+    }
+
+    /* ── FOCUS CARD ─────────────────────────────────────── */
+    .focus-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 16px;
+      margin-bottom: 10px;
+      transition: border-color 0.3s, background 0.3s;
+    }
+
+    .focus-card.active-state  { border-color: var(--accent); }
+    .focus-card.warning-state { border-color: var(--danger); }
+
+    .focus-task-name {
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.3;
+      color: var(--text);
+      margin: 6px 0 8px;
+    }
+
+    /* ── TIMER ──────────────────────────────────────────── */
+    .timer {
+      font-family: var(--mono);
+      font-size: 54px;
+      font-weight: 600;
+      letter-spacing: -2px;
+      line-height: 1;
+      color: var(--text);
+      margin: 10px 0 4px;
+      transition: color 0.4s;
+    }
+
+    .timer.t-warn   { color: var(--warn); }
+    .timer.t-danger { color: var(--danger); }
+
+    .timer-sub {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      color: var(--text3);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .timer-track {
+      height: 3px;
+      background: var(--bg3);
+      border-radius: 2px;
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+
+    .timer-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--accent);
+      width: 0%;
+      transition: width 1s linear, background 0.4s;
+    }
+
+    /* ── RABBIT HOLE WARNING ────────────────────────────── */
+    .rh-warn {
+      background: var(--danger2);
+      border: 1px solid var(--danger);
+      border-radius: var(--r-sm);
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      display: none;
+    }
+
+    .rh-warn.show { display: block; }
+
+    .rh-warn-title {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--danger);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+
+    .rh-warn-body {
+      font-size: 12px;
+      color: var(--danger);
+      opacity: 0.85;
+      line-height: 1.45;
+    }
+
+    /* ── EXTENSION PANEL ────────────────────────────────── */
+    .ext-panel {
+      background: var(--bg3);
+      border-radius: var(--r-sm);
+      border: 1px solid var(--border2);
+      padding: 12px;
+      margin-bottom: 12px;
+      display: none;
+    }
+
+    .ext-panel.show { display: block; }
+
+    .ext-panel-label {
+      font-size: 12px;
+      color: var(--text2);
+      margin-bottom: 6px;
+    }
+
+    /* ── BUTTONS ─────────────────────────────────────────── */
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .btn {
+      flex: 1;
+      min-width: 0;
+      padding: 10px 10px;
+      border: 1px solid var(--border2);
+      border-radius: var(--r-sm);
+      background: transparent;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.12s;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .btn:active { transform: scale(0.97); }
+    .btn:hover  { background: var(--bg3); }
+
+    .btn.primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: transparent;
+    }
+
+    .btn.primary:hover { opacity: 0.88; background: var(--accent); }
+
+    .btn.danger {
+      background: var(--danger2);
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+
+    .btn.warn {
+      background: var(--warn2);
+      color: var(--warn);
+      border-color: var(--warn);
+    }
+
+    .btn.sm {
+      flex: 0 0 auto;
+      padding: 7px 12px;
+      font-size: 12px;
+    }
+
+    .btn:disabled { opacity: 0.38; cursor: not-allowed; transform: none; }
+
+    /* ── PRIORITY PILLS ─────────────────────────────────── */
+    .pill {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    .pill.p-critical { background: var(--danger2); color: var(--danger); }
+    .pill.p-value    { background: var(--accent2); color: var(--accent); }
+    .pill.p-nice     { background: var(--bg3);     color: var(--text3);  }
+    .pill.s-ip       { background: var(--info2);   color: var(--info);   }
+    .pill.s-done     { background: var(--accent2); color: var(--accent); }
+    .pill.s-ns       { background: var(--bg3);     color: var(--text3);  }
+
+    /* ── TASK LIST ──────────────────────────────────────── */
+    .task-list { display: flex; flex-direction: column; gap: 7px; }
+
+    .task-row {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-left: 3px solid transparent;
+      border-radius: var(--r);
+      padding: 11px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .task-row:active { background: var(--bg3); }
+
+    .task-row.lc-critical { border-left-color: var(--danger); }
+    .task-row.lc-value    { border-left-color: var(--accent); }
+    .task-row.lc-nice     { border-left-color: var(--bg3);    }
+    .task-row.is-active   { background: var(--accent2); border-left-color: var(--accent); border-color: var(--accent); }
+    .task-row.is-done     { opacity: 0.55; }
+
+    .task-row-left { flex: 1; min-width: 0; }
+
+    .task-row-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 3px;
+    }
+
+    .task-row.is-done .task-row-name { text-decoration: line-through; }
+
+    .task-row-pills { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+
+    .task-row-right {
+      flex-shrink: 0;
+      text-align: right;
+    }
+
+    .task-time-badge {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text3);
+    }
+
+    .active-dot {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-right: 2px;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    /* ── SECTION TITLE ──────────────────────────────────── */
+    .sec-title {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin: 14px 0 7px;
+    }
+
+    /* ── DIVIDER ────────────────────────────────────────── */
+    .divider { height: 1px; background: var(--border); margin: 13px 0; }
+
+    /* ── FORMS ──────────────────────────────────────────── */
+    .form-group { margin-bottom: 12px; }
+    .form-group:last-child { margin-bottom: 0; }
+
+    .form-lbl {
+      display: block;
+      font-family: var(--mono);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text3);
+      margin-bottom: 5px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    textarea,
+    select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border2);
+      border-radius: var(--r-sm);
+      padding: 9px 11px;
+      font-family: var(--sans);
+      font-size: 14px;
+      color: var(--text);
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 75px;
+      line-height: 1.5;
+    }
+
+    select option { background: var(--bg); color: var(--text); }
+
+    /* ── PROGRESS BAR ───────────────────────────────────── */
+    .prog-track {
+      height: 4px;
+      background: var(--bg3);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 7px;
+    }
+
+    .prog-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width 0.5s ease;
+    }
+
+    /* ── BUDGET DISPLAY ─────────────────────────────────── */
+    .budget-blocks {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .budget-block {
+      border-radius: var(--r-sm);
+      padding: 10px;
+      text-align: center;
+    }
+
+    .budget-block .bv {
+      font-family: var(--mono);
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1;
+    }
+
+    .budget-block .bl {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-top: 3px;
+    }
+
+    .budget-block.focus-blk { background: var(--accent2); }
+    .budget-block.focus-blk .bv { color: var(--accent); }
+    .budget-block.pt-blk    { background: var(--warn2);   }
+    .budget-block.pt-blk .bv    { color: var(--warn); }
+    .budget-block.misc-blk  { background: var(--bg3);     }
+    .budget-block.misc-blk .bv  { color: var(--text2); }
+
+    /* ── DAILY LOG ──────────────────────────────────────── */
+    .log-entry {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    .log-entry:last-child { border-bottom: none; }
+
+    .log-name { flex: 1; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .log-dur  { font-family: var(--mono); font-size: 11px; color: var(--text3); flex-shrink: 0; }
+
+    .day-group-header {
+      font-family: var(--mono);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text3);
+      padding: 10px 0 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* ── ARCHIVE ────────────────────────────────────────── */
+    .archive-row {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--r);
+      padding: 11px 13px;
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+
+    .archive-row:active { background: var(--bg3); }
+
+    .archive-name { font-size: 14px; font-weight: 500; color: var(--text); }
+
+    .archive-meta {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text3);
+      margin-top: 4px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .archive-notes {
+      font-size: 12px;
+      color: var(--text3);
+      margin-top: 5px;
+      line-height: 1.4;
+    }
+
+    /* ── EXPORT ─────────────────────────────────────────── */
+    .export-box {
+      background: var(--bg3);
+      border-radius: var(--r-sm);
+      border: 1px solid var(--border2);
+      padding: 13px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text2);
+      line-height: 1.75;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 320px;
+      overflow-y: auto;
+      margin: 10px 0;
+    }
+
+    /* ── BOTTOM SHEET ───────────────────────────────────── */
+    .sheet-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.48);
+      z-index: 50;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .sheet-overlay.open { display: flex; }
+
+    .sheet-inner {
+      width: 100%;
+      max-width: 430px;
+      background: var(--bg);
+      border-radius: var(--r) var(--r) 0 0;
+      padding: 0 18px max(28px, env(safe-area-inset-bottom, 28px));
+      max-height: 88dvh;
+      overflow-y: auto;
+      animation: sheetUp 0.22s ease;
+    }
+
+    @keyframes sheetUp {
+      from { transform: translateY(24px); opacity: 0; }
+      to   { transform: none; opacity: 1; }
+    }
+
+    .sheet-handle {
+      width: 36px; height: 4px;
+      background: var(--border2);
+      border-radius: 2px;
+      margin: 12px auto 16px;
+    }
+
+    .sheet-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* ── TOAST ──────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+      left: 50%;
+      transform: translateX(-50%) translateY(12px);
+      background: var(--text);
+      color: var(--bg);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 200;
+      white-space: nowrap;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── EMPTY STATE ────────────────────────────────────── */
+    .empty {
+      text-align: center;
+      padding: 36px 20px;
+      color: var(--text3);
+    }
+
+    .empty .e-icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+      opacity: 0.6;
+    }
+
+    .empty p { font-size: 13px; line-height: 1.5; }
+
+    /* ── NO-TASK PLACEHOLDER ────────────────────────────── */
+    .no-task {
+      text-align: center;
+      padding: 22px 16px;
+      color: var(--text3);
+    }
+
+    .no-task .nt-main { font-size: 13px; color: var(--text2); margin-bottom: 3px; }
+    .no-task .nt-sub  { font-size: 12px; }
+
+    /* ── SCROLLBAR ──────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 2px; }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+    /* ── QUICK-ADD INLINE ───────────────────────────────── */
+    .inline-add { display: flex; gap: 7px; }
+    .inline-add input { flex: 1; }
+    .inline-add select { flex: 0 0 130px; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── HEADER ────────────────────────────────────────── -->
+  <header class="hdr">
+    <div class="hdr-title">The <span>Balancer</span></div>
+    <div class="wk-badge" id="wk-badge">WK --</div>
+  </header>
+
+  <!-- ── TAB NAV ──────────────────────────────────────── -->
+  <nav class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('focus')">Focus</button>
+    <button class="tab-btn" onclick="switchTab('tasks')">Tasks</button>
+    <button class="tab-btn" onclick="switchTab('budget')">Budget</button>
+    <button class="tab-btn" onclick="switchTab('archive')">Archive</button>
+  </nav>
+
+  <!-- ══════════════════════════════════════════════════════
+       TAB 1 — FOCUS
+  ══════════════════════════════════════════════════════ -->
+  <div class="tab-pane active" id="pane-focus">
+
+    <!-- Stats strip -->
+    <div class="stats-grid">
+      <div class="stat-cell">
+        <div class="stat-val" id="s-hrs">--</div>
+        <div class="stat-lbl">hrs left</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-val c-danger" id="s-crit">0</div>
+        <div class="stat-lbl">critical</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-val c-good" id="s-done">0</div>
+        <div class="stat-lbl">done</div>
+      </div>
+    </div>
+
+    <!-- Active task card -->
+    <div class="focus-card" id="focus-card">
+      <div class="card-label">Active task</div>
+
+      <!-- Empty state -->
+      <div class="no-task" id="fc-empty">
+        <div class="nt-main">No active task</div>
+        <div class="nt-sub">Tasks tab → tap a task → Activate</div>
+      </div>
+
+      <!-- Active state -->
+      <div id="fc-active" style="display:none">
+        <div class="focus-task-name" id="fc-name">—</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:2px;" id="fc-pills"></div>
+
+        <div class="timer" id="timer">00:00:00</div>
+        <div class="timer-sub" id="timer-sub">session in progress</div>
+        <div class="timer-track"><div class="timer-fill" id="timer-fill"></div></div>
+
+        <!-- Rabbit hole warning -->
+        <div class="rh-warn" id="rh-warn">
+          <div class="rh-warn-title">⚠ Rabbit hole — re-evaluate now</div>
+          <div class="rh-warn-body" id="rh-body">Over 90 min on this task. Is this still the highest-impact use of your focus time?</div>
+        </div>
+
+        <!-- Extension panel (requires reason) -->
+        <div class="ext-panel" id="ext-panel">
+          <div class="ext-panel-label">Log your reason before extending +30 min:</div>
+          <input type="text" id="ext-reason" placeholder="e.g. Awaiting population data from risk team…" />
+          <div class="btn-row" style="margin-top:8px;">
+            <button class="btn warn" onclick="confirmExtension()">Confirm +30 min</button>
+            <button class="btn sm" onclick="cancelExtension()">Cancel</button>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="btn-row">
+          <button class="btn danger" onclick="completeTask()">Mark done</button>
+          <button class="btn" onclick="pauseTask()">Pause</button>
+          <button class="btn warn" id="ext-btn" onclick="requestExtension()">+30 min</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Battle plan: critical tasks -->
+    <div class="card">
+      <div class="card-label">Battle plan — critical this week</div>
+      <div id="battle-list"></div>
+    </div>
+
+  </div><!-- /pane-focus -->
+
+  <!-- ══════════════════════════════════════════════════════
+       TAB 2 — TASKS
+  ══════════════════════════════════════════════════════ -->
+  <div class="tab-pane" id="pane-tasks">
+
+    <!-- Quick add card -->
+    <div class="card">
+      <div class="card-label">Add task</div>
+      <div class="form-group">
+        <input type="text" id="new-name" placeholder="Task description…"
+               onkeydown="if(event.key==='Enter') addTask()" />
+      </div>
+      <div class="inline-add">
+        <select id="new-priority">
+          <option value="critical">Critical</option>
+          <option value="value" selected>Value-Add</option>
+          <option value="nice">Nice-to-Have</option>
+        </select>
+        <button class="btn primary" onclick="addTask()" style="flex:0 0 auto;">Add</button>
+      </div>
+    </div>
+
+    <!-- Task list -->
+    <div id="task-list-wrap"></div>
+
+  </div><!-- /pane-tasks -->
+
+  <!-- ══════════════════════════════════════════════════════
+       TAB 3 — BUDGET
+  ══════════════════════════════════════════════════════ -->
+  <div class="tab-pane" id="pane-budget">
+
+    <!-- Allocation blocks -->
+    <div class="card">
+      <div class="card-label">Weekly allocation</div>
+      <div class="budget-blocks">
+        <div class="budget-block focus-blk">
+          <div class="bv" id="b-focus">--h</div>
+          <div class="bl">focus</div>
+        </div>
+        <div class="budget-block pt-blk">
+          <div class="bv" id="b-pt">3.5h</div>
+          <div class="bl">training</div>
+        </div>
+        <div class="budget-block misc-blk">
+          <div class="bv" id="b-misc">4.0h</div>
+          <div class="bl">misc</div>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:3px;">
+        <span>Focus time used this week</span>
+        <span id="b-used-lbl" style="font-family:var(--mono);">0 / --h</span>
+      </div>
+      <div class="prog-track"><div class="prog-fill" id="b-prog"></div></div>
+    </div>
+
+    <!-- Daily time log -->
+    <div class="card">
+      <div class="card-label">Session log — this week</div>
+      <div id="daily-log"></div>
+    </div>
+
+    <!-- Settings -->
+    <div class="card">
+      <div class="card-label">Settings — weekly hours</div>
+      <div class="form-group">
+        <label class="form-lbl">Total work hours / week</label>
+        <input type="number" id="s-total" value="40" min="1" max="80" onchange="saveSettings()" />
+      </div>
+      <div class="form-group">
+        <label class="form-lbl">Personal training (hrs)</label>
+        <input type="number" id="s-pt" value="3.5" min="0" max="20" step="0.5" onchange="saveSettings()" />
+      </div>
+      <div class="form-group">
+        <label class="form-lbl">Misc / admin / ad-hoc (hrs)</label>
+        <input type="number" id="s-misc" value="4.0" min="0" max="20" step="0.5" onchange="saveSettings()" />
+      </div>
+      <div class="form-group">
+        <label class="form-lbl">Hyperfocus timer limit (minutes)</label>
+        <input type="number" id="s-timer" value="90" min="30" max="240" step="15" onchange="saveSettings()" />
+      </div>
+    </div>
+
+  </div><!-- /pane-budget -->
+
+  <!-- ══════════════════════════════════════════════════════
+       TAB 4 — ARCHIVE
+  ══════════════════════════════════════════════════════ -->
+  <div class="tab-pane" id="pane-archive">
+
+    <!-- Performance summary export -->
+    <div class="card">
+      <div class="card-label">Performance summary export</div>
+      <p style="font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:11px;">
+        Generate a formatted summary of all completed tasks for manager
+        check-ins, project retrospectives, and end-of-cycle reviews.
+      </p>
+      <div class="btn-row">
+        <button class="btn primary" onclick="genExport()">Generate summary</button>
+        <button class="btn" id="copy-btn" style="display:none;" onclick="copyExport()">Copy</button>
+      </div>
+      <div id="export-wrap" style="display:none;">
+        <div class="export-box" id="export-text"></div>
+      </div>
+    </div>
+
+    <!-- Completed tasks -->
+    <div class="sec-title">Completed tasks — evidence log</div>
+    <div id="archive-wrap"></div>
+
+  </div><!-- /pane-archive -->
+
+</div><!-- /#app -->
+
+<!-- ══════════════════════════════════════════════════════
+     TASK DETAIL BOTTOM SHEET
+══════════════════════════════════════════════════════ -->
+<div class="sheet-overlay" id="sheet" onclick="handleSheetClick(event)">
+  <div class="sheet-inner">
+    <div class="sheet-handle"></div>
+
+    <div class="sheet-title">
+      <span id="sh-title">Task</span>
+      <button class="btn sm" onclick="closeSheet()">Close</button>
+    </div>
+
+    <div class="form-group">
+      <label class="form-lbl">Task name</label>
+      <input type="text" id="sh-name" placeholder="Task description…" />
+    </div>
+
+    <div class="form-group">
+      <label class="form-lbl">Priority</label>
+      <select id="sh-priority">
+        <option value="critical">Critical</option>
+        <option value="value">Value-Add</option>
+        <option value="nice">Nice-to-Have</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-lbl">Status</label>
+      <select id="sh-status">
+        <option value="not-started">Not Started</option>
+        <option value="in-progress">In Progress</option>
+        <option value="done">Done</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-lbl">Notes / evidence links / workpaper refs</label>
+      <textarea id="sh-notes" placeholder="GW link, rabbit hole log, finding ref…"></textarea>
+    </div>
+
+    <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:12px;" id="sh-meta"></div>
+
+    <div class="divider"></div>
+
+    <div class="btn-row">
+      <button class="btn primary" onclick="saveSheet()">Save</button>
+      <button class="btn danger" id="sh-activate-btn" onclick="activateFromSheet()">Activate</button>
+      <button class="btn sm" onclick="deleteFromSheet()" style="color:var(--text3);">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════ -->
+<script>
+'use strict';
+// ─────────────────────────────────────────────────────────
+// STATE
+// All data lives in localStorage under the key 'blncr_v2'.
+// ─────────────────────────────────────────────────────────
+const DEFAULT_STATE = {
+  tasks:          [],       // [{id, name, priority, status, notes, createdAt, doneAt, totalMins, weekCreated}]
+  sessions:       [],       // [{taskId, taskName, start, end, durationMins, weekStart}]
+  extensions:     [],       // [{taskId, reason, at, newLimit}]
+  activeTaskId:   null,
+  activeStart:    null,     // ISO string
+  sessionLimit:   90,       // minutes — current session's warning threshold
+  weekStart:      null,     // 'YYYY-MM-DD' Monday
+  nextId:         1,
+  settings: {
+    totalHours:   40,
+    ptHours:      3.5,
+    miscHours:    4.0,
+    timerLimit:   90        // default hyperfocus limit in minutes
+  }
+};
+
+let S = { ...DEFAULT_STATE };
+
+function save() {
+  try { localStorage.setItem('blncr_v2', JSON.stringify(S)); } catch(e) {}
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem('blncr_v2');
+    if (raw) S = Object.assign({}, DEFAULT_STATE, JSON.parse(raw));
+  } catch(e) {}
+  checkWeekReset();
+}
+
+// ─────────────────────────────────────────────────────────
+// WEEK LOGIC
+// ─────────────────────────────────────────────────────────
+function getMondayStr(d) {
+  d = d ? new Date(d) : new Date();
+  const day = d.getDay();
+  const diff = (day === 0 ? -6 : 1 - day);
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString().slice(0, 10);
+}
+
+function checkWeekReset() {
+  const monday = getMondayStr();
+  if (S.weekStart !== monday) {
+    S.weekStart = monday;
+    save();
+  }
+}
+
+function getWeekNum(dateStr) {
+  const d = new Date(dateStr || new Date());
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const jan4 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(((d - jan4) / 86400000 - 3 + ((jan4.getDay() + 6) % 7)) / 7);
+}
+
+// ─────────────────────────────────────────────────────────
+// TIMER ENGINE
+// ─────────────────────────────────────────────────────────
+let _timerInterval = null;
+
+function startTimer() {
+  stopTimer();
+  _timerInterval = setInterval(tickTimer, 1000);
+  tickTimer();
+}
+
+function stopTimer() {
+  clearInterval(_timerInterval);
+  _timerInterval = null;
+}
+
+function tickTimer() {
+  if (!S.activeTaskId || !S.activeStart) { stopTimer(); return; }
+
+  const elapsed = (Date.now() - new Date(S.activeStart).getTime()) / 1000;
+  const h  = Math.floor(elapsed / 3600);
+  const m  = Math.floor((elapsed % 3600) / 60);
+  const sec = Math.floor(elapsed % 60);
+  const display = `${pad(h)}:${pad(m)}:${pad(sec)}`;
+  const elMins  = elapsed / 60;
+  const limit   = S.sessionLimit || S.settings.timerLimit || 90;
+
+  const timerEl = $('timer');
+  const fillEl  = $('timer-fill');
+  const subEl   = $('timer-sub');
+  const warnEl  = $('rh-warn');
+  const bodyEl  = $('rh-body');
+
+  if (!timerEl) return;
+
+  timerEl.textContent = display;
+
+  // Progress bar
+  const pct = Math.min((elMins / limit) * 100, 100);
+  fillEl.style.width = pct + '%';
+
+  const NEAR = limit - 5;
+
+  if (elMins >= limit) {
+    timerEl.className = 'timer t-danger';
+    fillEl.style.background = 'var(--danger)';
+    subEl.textContent = `${Math.floor(elMins)} MIN — RABBIT HOLE ALERT`;
+    warnEl.classList.add('show');
+    bodyEl.textContent = `${Math.floor(elMins)} min on this task. Mandatory re-evaluation — is this still the highest-impact use of your remaining focus time?`;
+  } else if (elMins >= NEAR) {
+    timerEl.className = 'timer t-warn';
+    fillEl.style.background = 'var(--warn)';
+    subEl.textContent = `${Math.floor(elMins)} min — approaching ${limit} min limit`;
+    warnEl.classList.remove('show');
+  } else {
+    timerEl.className = 'timer';
+    fillEl.style.background = 'var(--accent)';
+    subEl.textContent = `${Math.floor(elMins)} min in session`;
+    warnEl.classList.remove('show');
+  }
+}
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+// ─────────────────────────────────────────────────────────
+// TASK ACTIONS
+// ─────────────────────────────────────────────────────────
+function activateTask(id) {
+  // Close any existing session first
+  if (S.activeTaskId && S.activeTaskId !== id) {
+    closeSession('switched task');
+  }
+
+  S.activeTaskId = id;
+  S.activeStart  = new Date().toISOString();
+  S.sessionLimit = S.settings.timerLimit || 90;
+
+  const task = S.tasks.find(t => t.id === id);
+  if (task && task.status !== 'done') task.status = 'in-progress';
+
+  save();
+  renderFocus();
+  renderTaskList();
+  switchTab('focus');
+  startTimer();
+  toast('Task activated');
+}
+
+function pauseTask() {
+  if (!S.activeTaskId) return;
+  closeSession('paused');
+  S.activeTaskId = null;
+  S.activeStart  = null;
+  stopTimer();
+  save();
+  renderFocus();
+  renderTaskList();
+  toast('Task paused');
+}
+
+function completeTask() {
+  if (!S.activeTaskId) return;
+  const task = S.tasks.find(t => t.id === S.activeTaskId);
+  if (task) {
+    closeSession('completed');
+    task.status = 'done';
+    task.doneAt = new Date().toISOString();
+  }
+  S.activeTaskId = null;
+  S.activeStart  = null;
+  S.sessionLimit = S.settings.timerLimit || 90;
+  stopTimer();
+  save();
+  renderFocus();
+  renderTaskList();
+  renderArchive();
+  toast('Marked done — great work!');
+}
+
+function closeSession(note) {
+  if (!S.activeTaskId || !S.activeStart) return;
+  const start = new Date(S.activeStart);
+  const end   = new Date();
+  const dur   = Math.max(1, Math.round((end - start) / 60000));
+
+  const task = S.tasks.find(t => t.id === S.activeTaskId);
+  S.sessions.push({
+    taskId:      S.activeTaskId,
+    taskName:    task ? task.name : 'Unknown',
+    start:       S.activeStart,
+    end:         end.toISOString(),
+    durationMins: dur,
+    weekStart:   S.weekStart,
+    note
+  });
+
+  if (task) task.totalMins = (task.totalMins || 0) + dur;
+}
+
+// Extension (requires typed reason)
+function requestExtension() {
+  $('ext-panel').classList.add('show');
+  $('ext-reason').focus();
+}
+
+function cancelExtension() {
+  $('ext-panel').classList.remove('show');
+  $('ext-reason').value = '';
+}
+
+function confirmExtension() {
+  const reason = $('ext-reason').value.trim();
+  if (!reason) { toast('Please enter a reason first'); return; }
+
+  S.sessionLimit += 30;
+  S.extensions.push({
+    taskId:     S.activeTaskId,
+    reason,
+    at:         new Date().toISOString(),
+    newLimit:   S.sessionLimit
+  });
+
+  $('ext-panel').classList.remove('show');
+  $('ext-reason').value = '';
+  $('rh-warn').classList.remove('show');
+
+  save();
+  toast(`Extended — new limit: ${S.sessionLimit} min`);
+}
+
+// ─────────────────────────────────────────────────────────
+// TASK CRUD
+// ─────────────────────────────────────────────────────────
+function addTask() {
+  const name = $('new-name').value.trim();
+  if (!name) { toast('Enter a task name'); return; }
+  const priority = $('new-priority').value;
+
+  S.tasks.unshift({
+    id:          't' + (S.nextId++),
+    name,
+    priority,
+    status:      'not-started',
+    notes:       '',
+    createdAt:   new Date().toISOString(),
+    doneAt:      null,
+    totalMins:   0,
+    weekCreated: S.weekStart
+  });
+
+  $('new-name').value = '';
+  save();
+  renderTaskList();
+  renderFocus();
+  toast('Task added');
+}
+
+// ─────────────────────────────────────────────────────────
+// SETTINGS
+// ─────────────────────────────────────────────────────────
+function saveSettings() {
+  S.settings.totalHours  = parseFloat($('s-total').value)  || 40;
+  S.settings.ptHours     = parseFloat($('s-pt').value)     || 3.5;
+  S.settings.miscHours   = parseFloat($('s-misc').value)   || 4.0;
+  S.settings.timerLimit  = parseInt($('s-timer').value)    || 90;
+  save();
+  renderBudget();
+  toast('Settings saved');
+}
+
+// ─────────────────────────────────────────────────────────
+// TASK DETAIL SHEET
+// ─────────────────────────────────────────────────────────
+let _editId = null;
+
+function openSheet(id) {
+  const t = S.tasks.find(x => x.id === id);
+  if (!t) return;
+  _editId = id;
+
+  $('sh-title').textContent    = t.name.length > 34 ? t.name.slice(0, 34) + '…' : t.name;
+  $('sh-name').value           = t.name;
+  $('sh-priority').value       = t.priority;
+  $('sh-status').value         = t.status;
+  $('sh-notes').value          = t.notes || '';
+
+  const mins  = t.totalMins || 0;
+  const metaP = [
+    t.createdAt ? 'Created ' + fmtDate(t.createdAt.slice(0,10)) : '',
+    t.doneAt    ? 'Done '    + fmtDate(t.doneAt.slice(0,10))    : '',
+    mins        ? fmtMins(mins) + ' logged'                      : ''
+  ].filter(Boolean).join(' · ');
+
+  $('sh-meta').textContent = metaP;
+
+  const actBtn = $('sh-activate-btn');
+  actBtn.textContent = S.activeTaskId === id ? 'Active ✓' : 'Activate';
+  actBtn.disabled    = S.activeTaskId === id;
+
+  $('sheet').classList.add('open');
+}
+
+function closeSheet() {
+  $('sheet').classList.remove('open');
+  _editId = null;
+}
+
+function handleSheetClick(e) {
+  if (e.target === $('sheet')) closeSheet();
+}
+
+function saveSheet() {
+  if (!_editId) return;
+  const t = S.tasks.find(x => x.id === _editId);
+  if (!t) return;
+
+  t.name     = $('sh-name').value.trim() || t.name;
+  t.priority = $('sh-priority').value;
+  t.notes    = $('sh-notes').value;
+
+  const newStatus = $('sh-status').value;
+  if (newStatus === 'done' && t.status !== 'done') {
+    t.doneAt = new Date().toISOString();
+    if (S.activeTaskId === _editId) {
+      closeSession('marked done via edit');
+      S.activeTaskId = null;
+      S.activeStart  = null;
+      stopTimer();
+    }
+  }
+  t.status = newStatus;
+
+  save();
+  renderFocus();
+  renderTaskList();
+  renderArchive();
+  closeSheet();
+  toast('Saved');
+}
+
+function activateFromSheet() {
+  const id = _editId;
+  closeSheet();
+  activateTask(id);
+}
+
+function deleteFromSheet() {
+  if (!_editId) return;
+  if (!confirm('Delete this task?')) return;
+
+  if (S.activeTaskId === _editId) {
+    stopTimer();
+    S.activeTaskId = null;
+    S.activeStart  = null;
+  }
+
+  S.tasks    = S.tasks.filter(t => t.id !== _editId);
+  S.sessions = S.sessions.filter(s => s.taskId !== _editId);
+  save();
+  renderFocus();
+  renderTaskList();
+  renderArchive();
+  closeSheet();
+  toast('Deleted');
+}
+
+// ─────────────────────────────────────────────────────────
+// RENDER — FOCUS TAB
+// ─────────────────────────────────────────────────────────
+function renderFocus() {
+  // Stats
+  const hrsLeft = getFocusHrsLeft();
+  const critCount = S.tasks.filter(t => t.priority === 'critical' && t.status !== 'done').length;
+  const doneCount = S.tasks.filter(t => t.status === 'done').length;
+
+  $('s-hrs').textContent  = hrsLeft.toFixed(1);
+  $('s-crit').textContent = critCount;
+  $('s-done').textContent = doneCount;
+  $('wk-badge').textContent = 'WK ' + getWeekNum(S.weekStart);
+
+  // Focus card
+  const task = S.activeTaskId ? S.tasks.find(t => t.id === S.activeTaskId) : null;
+
+  if (task) {
+    $('fc-empty').style.display = 'none';
+    $('fc-active').style.display = 'block';
+    $('focus-card').className = 'focus-card active-state';
+
+    $('fc-name').textContent = task.name;
+    $('fc-pills').innerHTML  =
+      `<span class="pill p-${task.priority}">${pLabel(task.priority)}</span>` +
+      `<span class="pill s-ip">In Progress</span>`;
+
+    startTimer();
+  } else {
+    $('fc-empty').style.display = 'block';
+    $('fc-active').style.display = 'none';
+    $('focus-card').className = 'focus-card';
+    stopTimer();
+    $('timer').textContent     = '00:00:00';
+    $('timer').className       = 'timer';
+    $('timer-fill').style.width = '0%';
+    $('rh-warn').classList.remove('show');
+    $('ext-panel').classList.remove('show');
+    $('timer-sub').textContent = 'session in progress';
+  }
+
+  // Battle plan
+  const critical = S.tasks
+    .filter(t => t.priority === 'critical' && t.status !== 'done')
+    .slice(0, 6);
+
+  const bl = $('battle-list');
+  if (critical.length === 0) {
+    bl.innerHTML = '<div style="font-size:13px;color:var(--text3);text-align:center;padding:14px 0;">No critical tasks active — great position.</div>';
+  } else {
+    bl.innerHTML = critical.map(t =>
+      `<div class="log-entry" style="cursor:pointer;" onclick="openSheet('${t.id}')">
+         <div class="log-name" style="font-weight:500;">${esc(t.name)}</div>
+         <span class="pill p-critical">Critical</span>
+       </div>`
+    ).join('');
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// RENDER — TASKS TAB
+// ─────────────────────────────────────────────────────────
+function renderTaskList() {
+  const wrap = $('task-list-wrap');
+  if (S.tasks.length === 0) {
+    wrap.innerHTML = `<div class="empty"><div class="e-icon">📋</div><p>No tasks yet.<br>Add your first task above.</p></div>`;
+    return;
+  }
+
+  const pOrd = { critical: 0, value: 1, nice: 2 };
+  const sOrd = { 'in-progress': 0, 'not-started': 1, done: 2 };
+
+  const sorted = [...S.tasks].sort((a, b) => {
+    if (a.id === S.activeTaskId) return -1;
+    if (b.id === S.activeTaskId) return  1;
+    if (a.status === 'done' && b.status !== 'done') return  1;
+    if (b.status === 'done' && a.status !== 'done') return -1;
+    if (pOrd[a.priority] !== pOrd[b.priority]) return pOrd[a.priority] - pOrd[b.priority];
+    return sOrd[a.status] - sOrd[b.status];
+  });
+
+  const active = sorted.filter(t => t.status !== 'done');
+  const done   = sorted.filter(t => t.status === 'done');
+
+  let html = '<div class="task-list">';
+
+  active.forEach(t => {
+    const isActive = t.id === S.activeTaskId;
+    const liveAdd  = isActive && S.activeStart
+      ? Math.floor((Date.now() - new Date(S.activeStart).getTime()) / 60000)
+      : 0;
+    const mins = (t.totalMins || 0) + liveAdd;
+
+    html += `
+      <div class="task-row lc-${t.priority} ${isActive ? 'is-active' : ''}" onclick="openSheet('${t.id}')">
+        <div class="task-row-left">
+          <div class="task-row-name">${esc(t.name)}</div>
+          <div class="task-row-pills">
+            <span class="pill p-${t.priority}">${pLabel(t.priority)}</span>
+            <span class="pill s-${t.status === 'in-progress' ? 'ip' : 'ns'}">${sLabel(t.status)}</span>
+            ${isActive ? '<span class="active-dot"></span><span style="font-family:var(--mono);font-size:9px;color:var(--accent);letter-spacing:.08em;">ACTIVE</span>' : ''}
+          </div>
+        </div>
+        <div class="task-row-right">
+          ${mins > 0 ? `<div class="task-time-badge">${fmtMins(mins)}</div>` : ''}
+        </div>
+      </div>`;
+  });
+
+  if (done.length > 0) {
+    html += `<div class="sec-title">Completed</div>`;
+    done.forEach(t => {
+      html += `
+        <div class="task-row lc-nice is-done" onclick="openSheet('${t.id}')">
+          <div class="task-row-left">
+            <div class="task-row-name">${esc(t.name)}</div>
+            <div class="task-row-pills">
+              <span class="pill s-done">Done</span>
+              <span class="pill p-${t.priority}">${pLabel(t.priority)}</span>
+            </div>
+          </div>
+          <div class="task-row-right">
+            <div class="task-time-badge">${fmtMins(t.totalMins || 0)}</div>
+          </div>
+        </div>`;
+    });
+  }
+
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+
+// ─────────────────────────────────────────────────────────
+// RENDER — BUDGET TAB
+// ─────────────────────────────────────────────────────────
+function renderBudget() {
+  const { totalHours, ptHours, miscHours, timerLimit } = S.settings;
+  const focusHrs = totalHours - ptHours - miscHours;
+
+  $('b-focus').textContent = focusHrs.toFixed(1) + 'h';
+  $('b-pt').textContent    = ptHours.toFixed(1) + 'h';
+  $('b-misc').textContent  = miscHours.toFixed(1) + 'h';
+
+  // Sync settings inputs
+  $('s-total').value = totalHours;
+  $('s-pt').value    = ptHours;
+  $('s-misc').value  = miscHours;
+  $('s-timer').value = timerLimit || 90;
+
+  // Used time this week
+  const wkSessions  = S.sessions.filter(s => s.weekStart === S.weekStart);
+  const totalMinUsed = wkSessions.reduce((sum, s) => sum + (s.durationMins || 0), 0);
+  const hrsUsed     = (totalMinUsed / 60);
+  const pct         = Math.min((hrsUsed / focusHrs) * 100, 100);
+
+  $('b-used-lbl').textContent = hrsUsed.toFixed(1) + ' / ' + focusHrs.toFixed(1) + 'h';
+  $('b-prog').style.width     = pct.toFixed(1) + '%';
+
+  // Daily log
+  const log = $('daily-log');
+
+  if (wkSessions.length === 0) {
+    log.innerHTML = '<div style="font-size:13px;color:var(--text3);text-align:center;padding:18px 0;">No sessions this week yet.</div>';
+    return;
+  }
+
+  // Group by day
+  const byDay = {};
+  wkSessions.forEach(s => {
+    const day = s.start.slice(0, 10);
+    (byDay[day] = byDay[day] || []).push(s);
+  });
+
+  let html = '';
+  Object.keys(byDay).sort().reverse().forEach(day => {
+    const dayMins = byDay[day].reduce((sum, s) => sum + (s.durationMins || 0), 0);
+    html += `<div class="day-group-header">
+               <span>${fmtDate(day)}</span>
+               <span>${fmtMins(dayMins)} total</span>
+             </div>`;
+    byDay[day].forEach(s => {
+      html += `<div class="log-entry">
+                 <div class="log-name">${esc(s.taskName)}</div>
+                 <div class="log-dur">${fmtMins(s.durationMins)}</div>
+               </div>`;
+    });
+  });
+
+  log.innerHTML = html;
+}
+
+// ─────────────────────────────────────────────────────────
+// RENDER — ARCHIVE TAB
+// ─────────────────────────────────────────────────────────
+function renderArchive() {
+  const done = [...S.tasks]
+    .filter(t => t.status === 'done')
+    .sort((a, b) => new Date(b.doneAt || b.createdAt) - new Date(a.doneAt || a.createdAt));
+
+  const wrap = $('archive-wrap');
+
+  if (done.length === 0) {
+    wrap.innerHTML = `<div class="empty"><div class="e-icon">🗂</div><p>No completed tasks yet.<br>Mark tasks done from the Focus tab.</p></div>`;
+    return;
+  }
+
+  wrap.innerHTML = done.map(t => `
+    <div class="archive-row" onclick="openSheet('${t.id}')">
+      <div class="archive-name">${esc(t.name)}</div>
+      <div class="archive-meta">
+        <span class="pill p-${t.priority}">${pLabel(t.priority)}</span>
+        ${t.doneAt  ? fmtDate(t.doneAt.slice(0, 10))    : ''}
+        ${t.totalMins ? ' · ' + fmtMins(t.totalMins)    : ''}
+      </div>
+      ${t.notes ? `<div class="archive-notes">${esc(t.notes.slice(0, 120))}${t.notes.length > 120 ? '…' : ''}</div>` : ''}
+    </div>`
+  ).join('');
+}
+
+// ─────────────────────────────────────────────────────────
+// PERFORMANCE SUMMARY EXPORT
+// ─────────────────────────────────────────────────────────
+function genExport() {
+  const done = [...S.tasks]
+    .filter(t => t.status === 'done')
+    .sort((a, b) => new Date(b.doneAt || b.createdAt) - new Date(a.doneAt || a.createdAt));
+
+  const now     = new Date();
+  const dateStr = now.toLocaleDateString('en-AU', { day: '2-digit', month: 'long', year: 'numeric' });
+  const sep     = '═'.repeat(52);
+  const dash    = '─'.repeat(44);
+
+  let out = `INTERNAL AUDIT — PERFORMANCE SUMMARY\n`;
+  out += `Generated: ${dateStr}\n`;
+  out += sep + '\n\n';
+
+  const sections = [
+    { label: 'CRITICAL DELIVERABLES',  key: 'critical', tasks: done.filter(t => t.priority === 'critical')  },
+    { label: 'VALUE-ADD ACTIVITIES',   key: 'value',    tasks: done.filter(t => t.priority === 'value')     },
+    { label: 'ADDITIONAL TASKS',       key: 'nice',     tasks: done.filter(t => t.priority === 'nice')      }
+  ];
+
+  sections.forEach(sec => {
+    if (sec.tasks.length === 0) return;
+    out += `${sec.label} (${sec.tasks.length})\n${dash}\n`;
+    sec.tasks.forEach((t, i) => {
+      out += `${i + 1}. ${t.name}\n`;
+      if (t.totalMins)  out += `   Time logged:  ${fmtMins(t.totalMins)}\n`;
+      if (t.doneAt)     out += `   Completed:    ${fmtDate(t.doneAt.slice(0,10))}\n`;
+      if (t.notes)      out += `   Notes:        ${t.notes}\n`;
+      out += '\n';
+    });
+  });
+
+  // Extension log (accountability transparency)
+  if (S.extensions.length > 0) {
+    out += `HYPERFOCUS EXTENSIONS LOGGED (${S.extensions.length})\n${dash}\n`;
+    S.extensions.forEach((e, i) => {
+      const task = S.tasks.find(t => t.id === e.taskId);
+      out += `${i + 1}. ${task ? task.name : 'Unknown task'}\n`;
+      out += `   Reason:  ${e.reason}\n`;
+      out += `   At:      ${new Date(e.at).toLocaleString('en-AU')}\n\n`;
+    });
+  }
+
+  // Totals
+  const totalMins  = done.reduce((sum, t) => sum + (t.totalMins || 0), 0);
+  const critical   = done.filter(t => t.priority === 'critical').length;
+  const valueAdd   = done.filter(t => t.priority === 'value').length;
+  const other      = done.filter(t => t.priority === 'nice').length;
+
+  out += sep + '\n';
+  out += `SUMMARY\n`;
+  out += `Tasks completed:  ${done.length}\n`;
+  out += `Critical:         ${critical}\n`;
+  out += `Value-Add:        ${valueAdd}\n`;
+  out += `Additional:       ${other}\n`;
+  if (totalMins > 0) {
+    out += `Total time logged: ${fmtMins(totalMins)}\n`;
+  }
+
+  $('export-text').textContent = out;
+  $('export-wrap').style.display = 'block';
+  $('copy-btn').style.display    = 'inline-flex';
+}
+
+function copyExport() {
+  const text = $('export-text').textContent;
+  navigator.clipboard.writeText(text)
+    .then(() => toast('Copied to clipboard'))
+    .catch(() => toast('Select the text above to copy'));
+}
+
+// ─────────────────────────────────────────────────────────
+// UTILITIES
+// ─────────────────────────────────────────────────────────
+function $(id) { return document.getElementById(id); }
+
+function esc(str) {
+  return String(str || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtMins(m) {
+  m = Math.round(m || 0);
+  if (m < 1)  return '< 1m';
+  if (m < 60) return `${m}m`;
+  return `${Math.floor(m/60)}h ${m % 60}m`;
+}
+
+function fmtDate(str) {
+  if (!str) return '';
+  const d = new Date(str.length === 10 ? str + 'T00:00:00' : str);
+  return d.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+function pLabel(p) {
+  return { critical: 'Critical', value: 'Value-Add', nice: 'Nice-to-Have' }[p] || p;
+}
+
+function sLabel(s) {
+  return { 'not-started': 'Not Started', 'in-progress': 'In Progress', done: 'Done' }[s] || s;
+}
+
+function getFocusHrsLeft() {
+  const { totalHours, ptHours, miscHours } = S.settings;
+  const focusHrs   = totalHours - ptHours - miscHours;
+  const wkMinsUsed = S.sessions
+    .filter(s => s.weekStart === S.weekStart)
+    .reduce((sum, s) => sum + (s.durationMins || 0), 0);
+  return Math.max(0, focusHrs - wkMinsUsed / 60);
+}
+
+function toast(msg, duration = 2200) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove('show'), duration);
+}
+
+// ─────────────────────────────────────────────────────────
+// TAB SWITCHING
+// ─────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  $('pane-' + name).classList.add('active');
+  document.querySelector(`.tab-btn[onclick="switchTab('${name}')"]`).classList.add('active');
+
+  if (name === 'budget')  renderBudget();
+  if (name === 'archive') renderArchive();
+  if (name === 'tasks')   renderTaskList();
+}
+
+// ─────────────────────────────────────────────────────────
+// PWA — SERVICE WORKER (inline blob for single-file hosting)
+// ─────────────────────────────────────────────────────────
+// NOTE FOR GITHUB PAGES DEPLOY:
+// For the "Add to Home Screen" install prompt on Android,
+// create a file called sw.js in your repo root with these contents,
+// then change the registration below to:
+//   navigator.serviceWorker.register('/sw.js')
+//
+// sw.js contents:
+// ─────────────────────────────────────────────────────────
+const SW_CODE = `
+const CACHE = 'balancer-v3';
+const URLS  = ['/'];
+self.addEventListener('install',  e => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(URLS))); });
+self.addEventListener('activate', e => e.waitUntil(clients.claim()));
+self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
+  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(res => {
+    const clone = res.clone();
+    caches.open(CACHE).then(c => c.put(e.request, clone));
+    return res;
+  })));
+});
+`;
+
+if ('serviceWorker' in navigator) {
+  const blob = new Blob([SW_CODE], { type: 'application/javascript' });
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+}
+
+// ─────────────────────────────────────────────────────────
+// PWA MANIFEST (inline — works without a separate file)
+// ─────────────────────────────────────────────────────────
+(function() {
+  const m = {
+    name:             'The Balancer',
+    short_name:       'Balancer',
+    description:      'ADHD-friendly internal audit productivity tool',
+    start_url:        '/',
+    display:          'standalone',
+    background_color: '#141311',
+    theme_color:      '#0A5740',
+    orientation:      'portrait',
+    icons: [{
+      src:   "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230A5740'/><text y='.9em' font-size='72' x='12'>⚖</text></svg>",
+      sizes: '192x192',
+      type:  'image/svg+xml'
+    }]
+  };
+  const link  = document.createElement('link');
+  link.rel    = 'manifest';
+  link.href   = URL.createObjectURL(new Blob([JSON.stringify(m)], { type: 'application/manifest+json' }));
+  document.head.appendChild(link);
+})();
+
+// ─────────────────────────────────────────────────────────
+// BOOT
+// ─────────────────────────────────────────────────────────
+load();           // restore state from localStorage
+renderFocus();    // paint focus tab (default)
+renderTaskList(); // pre-render tasks
+
+// Resume live timer if app reloaded mid-session
+if (S.activeTaskId && S.activeStart) startTimer();
+</script>
+</body>
+</html>
