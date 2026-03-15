@@ -10,83 +10,83 @@
   <title>The Balancer</title>
 
   <!--
-  ═══════════════════════════════════════════════════════════════
-  THE BALANCER — ADHD-Friendly Internal Audit Productivity Tool
-  ═══════════════════════════════════════════════════════════════
-  Single file. All state stored in localStorage (survives refresh).
-  Host on GitHub Pages — it's a static file, zero backend needed.
-
-  TO ADD A TASK: Use the Tasks tab in the app itself.
-  TO CHANGE SETTINGS: Budget tab → weekly settings section.
-  TO CHANGE CODE: Edit this file. Sections are clearly marked.
-
-  FOR FULL PWA INSTALL ON ANDROID:
-  Create a separate sw.js file in the same repo folder with the
-  contents from the SW_CODE string near the bottom of this file.
-  Then uncomment the "navigator.serviceWorker.register('/sw.js')"
-  line and delete the blob-URL registration block.
-  ═══════════════════════════════════════════════════════════════
+  ══════════════════════════════════════════════════════════════
+  THE BALANCER v2 — ADHD-Friendly Internal Audit Productivity
+  ══════════════════════════════════════════════════════════════
+  TABS:  Focus · Tasks · Day · Budget · Archive
+  NEW:   Day View · Tags · Exit Criteria (DoD) · Parked Obs
+         Interval Check (60-min focus interrupt + vibration)
+  DATA:  All stored in localStorage key 'blncr_v3'
+  PWA:   Requires sw.js in same repo folder for install prompt
+  ══════════════════════════════════════════════════════════════
   -->
 
-  <!-- Fonts: IBM Plex Mono for timer/numbers, Syne for UI -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
   <style>
-    /* ── DESIGN TOKENS ───────────────────────────────────── */
+    /* ╔══════════════════════════════════════════════════╗
+       ║  DESIGN TOKENS                                   ║
+       ╚══════════════════════════════════════════════════╝ */
     :root {
-      --bg:          #F5F2EC;
-      --bg2:         #ECEAE3;
-      --bg3:         #E1DED6;
-      --text:        #1C1B18;
-      --text2:       #56544E;
-      --text3:       #9C9A92;
-      --accent:      #0A5740;
-      --accent2:     #DCF0E8;
-      --warn:        #B45309;
-      --warn2:       #FEF3C0;
-      --danger:      #B91C1C;
-      --danger2:     #FEE2E2;
-      --info:        #1D4ED8;
-      --info2:       #DBEAFE;
-      --border:      rgba(28,27,24,0.09);
-      --border2:     rgba(28,27,24,0.16);
-      --mono:        'IBM Plex Mono', ui-monospace, monospace;
-      --sans:        'Syne', system-ui, sans-serif;
-      --r:           10px;
-      --r-sm:        6px;
+      --bg:      #F5F2EC;
+      --bg2:     #ECEAE3;
+      --bg3:     #E1DED6;
+      --bg4:     #D5D1C8;
+      --text:    #1C1B18;
+      --text2:   #56544E;
+      --text3:   #9C9A92;
+      --accent:  #0A5740;
+      --accent2: #DCF0E8;
+      --warn:    #B45309;
+      --warn2:   #FEF3C0;
+      --danger:  #B91C1C;
+      --danger2: #FEE2E2;
+      --info:    #1D4ED8;
+      --info2:   #DBEAFE;
+      --park:    #6B21A8;
+      --park2:   #F3E8FF;
+      --border:  rgba(28,27,24,0.09);
+      --border2: rgba(28,27,24,0.16);
+      --mono:    'IBM Plex Mono', monospace;
+      --sans:    'Syne', system-ui, sans-serif;
+      --r:       10px;
+      --rsm:     6px;
     }
 
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg:        #141311;
-        --bg2:       #1D1C19;
-        --bg3:       #252420;
-        --text:      #F0EDE5;
-        --text2:     #B5B2A9;
-        --text3:     #6E6B63;
-        --accent:    #10B981;
-        --accent2:   #052E1C;
-        --warn:      #F59E0B;
-        --warn2:     #271A03;
-        --danger:    #EF4444;
-        --danger2:   #2A0909;
-        --info:      #60A5FA;
-        --info2:     #0D1F3C;
-        --border:    rgba(240,237,229,0.07);
-        --border2:   rgba(240,237,229,0.14);
+        --bg:      #141311;
+        --bg2:     #1D1C19;
+        --bg3:     #252420;
+        --bg4:     #2E2D28;
+        --text:    #F0EDE5;
+        --text2:   #B5B2A9;
+        --text3:   #6E6B63;
+        --accent:  #10B981;
+        --accent2: #052E1C;
+        --warn:    #F59E0B;
+        --warn2:   #271A03;
+        --danger:  #EF4444;
+        --danger2: #2A0909;
+        --info:    #60A5FA;
+        --info2:   #0D1F3C;
+        --park:    #C084FC;
+        --park2:   #1A0A2E;
+        --border:  rgba(240,237,229,0.07);
+        --border2: rgba(240,237,229,0.14);
       }
     }
 
-    /* ── RESET ───────────────────────────────────────────── */
+    /* ╔══════════════════════════════════════════════════╗
+       ║  RESET & BASE                                    ║
+       ╚══════════════════════════════════════════════════╝ */
     *, *::before, *::after {
       box-sizing: border-box; margin: 0; padding: 0;
       -webkit-tap-highlight-color: transparent;
     }
-
     html { height: 100%; }
-
     body {
       min-height: 100%;
       background: var(--bg);
@@ -97,7 +97,9 @@
       overscroll-behavior: none;
     }
 
-    /* ── APP SHELL ───────────────────────────────────────── */
+    /* ╔══════════════════════════════════════════════════╗
+       ║  APP SHELL                                       ║
+       ╚══════════════════════════════════════════════════╝ */
     #app {
       max-width: 430px;
       margin: 0 auto;
@@ -106,408 +108,209 @@
       flex-direction: column;
     }
 
-    /* ── HEADER ─────────────────────────────────────────── */
+    /* ── HEADER ── */
     .hdr {
-      padding: env(safe-area-inset-top, 48px) 20px 0;
-      padding-top: max(env(safe-area-inset-top), 48px);
+      padding: max(env(safe-area-inset-top), 44px) 18px 12px;
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      padding-bottom: 14px;
     }
-
-    .hdr-title {
-      font-size: 20px;
-      font-weight: 700;
-      letter-spacing: -0.4px;
-      color: var(--text);
-    }
-
-    .hdr-title span {
-      color: var(--accent);
-    }
-
+    .hdr-title { font-size: 20px; font-weight: 700; letter-spacing: -0.4px; }
+    .hdr-title span { color: var(--accent); }
     .wk-badge {
       font-family: var(--mono);
-      font-size: 11px;
+      font-size: 10px;
       color: var(--text3);
       background: var(--bg2);
       border: 1px solid var(--border);
       padding: 3px 8px;
-      border-radius: var(--r-sm);
+      border-radius: var(--rsm);
       letter-spacing: 0.06em;
     }
 
-    /* ── TAB NAV ────────────────────────────────────────── */
+    /* ── TAB NAV (5 tabs) ── */
     .tab-nav {
       display: flex;
       border-bottom: 1px solid var(--border2);
       background: var(--bg);
       position: sticky;
       top: 0;
-      z-index: 10;
+      z-index: 20;
     }
-
     .tab-btn {
       flex: 1;
-      padding: 11px 4px 10px;
+      padding: 10px 2px 9px;
       background: none;
       border: none;
       font-family: var(--mono);
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 500;
       color: var(--text3);
       cursor: pointer;
       position: relative;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
       transition: color 0.15s;
     }
-
     .tab-btn.active { color: var(--text); }
-
     .tab-btn.active::after {
       content: '';
       position: absolute;
-      bottom: -1px; left: 12%; right: 12%;
+      bottom: -1px; left: 10%; right: 10%;
       height: 2px;
       background: var(--accent);
       border-radius: 2px 2px 0 0;
     }
 
-    /* ── SCROLL CONTENT ─────────────────────────────────── */
+    /* ── PANES ── */
     .tab-pane {
       flex: 1;
       overflow-y: auto;
-      padding: 16px 16px max(24px, env(safe-area-inset-bottom, 24px));
+      padding: 14px 15px max(24px, env(safe-area-inset-bottom, 24px));
       display: none;
     }
-
     .tab-pane.active {
       display: block;
       animation: fadeUp 0.18s ease;
     }
-
     @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(5px); }
+      from { opacity: 0; transform: translateY(4px); }
       to   { opacity: 1; transform: none; }
     }
 
-    /* ── CARDS ──────────────────────────────────────────── */
+    /* ╔══════════════════════════════════════════════════╗
+       ║  SHARED COMPONENTS                               ║
+       ╚══════════════════════════════════════════════════╝ */
+
+    /* ── CARD ── */
     .card {
       background: var(--bg2);
       border: 1px solid var(--border);
       border-radius: var(--r);
-      padding: 14px 15px;
+      padding: 13px 14px;
       margin-bottom: 10px;
     }
-
     .card-label {
       font-family: var(--mono);
       font-size: 9px;
-      letter-spacing: 0.14em;
+      letter-spacing: 0.13em;
       text-transform: uppercase;
       color: var(--text3);
-      margin-bottom: 10px;
+      margin-bottom: 9px;
     }
 
-    /* ── STATS GRID ─────────────────────────────────────── */
+    /* ── STATS STRIP ── */
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0,1fr));
-      gap: 8px;
+      gap: 7px;
       margin-bottom: 10px;
     }
-
     .stat-cell {
       background: var(--bg2);
       border: 1px solid var(--border);
       border-radius: var(--r);
-      padding: 11px 10px 9px;
+      padding: 10px 8px 8px;
       text-align: center;
     }
-
     .stat-val {
       font-family: var(--mono);
-      font-size: 21px;
+      font-size: 20px;
       font-weight: 600;
       line-height: 1;
       color: var(--text);
     }
-
-    .stat-val.c-danger { color: var(--danger); }
-    .stat-val.c-good   { color: var(--accent); }
-    .stat-val.c-warn   { color: var(--warn);   }
-
+    .stat-val.cd { color: var(--danger); }
+    .stat-val.ca { color: var(--accent); }
+    .stat-val.cw { color: var(--warn); }
     .stat-lbl {
       font-family: var(--mono);
-      font-size: 9px;
+      font-size: 8px;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: var(--text3);
-      margin-top: 4px;
+      margin-top: 3px;
     }
 
-    /* ── FOCUS CARD ─────────────────────────────────────── */
-    .focus-card {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: var(--r);
-      padding: 16px;
-      margin-bottom: 10px;
-      transition: border-color 0.3s, background 0.3s;
-    }
-
-    .focus-card.active-state  { border-color: var(--accent); }
-    .focus-card.warning-state { border-color: var(--danger); }
-
-    .focus-task-name {
-      font-size: 16px;
-      font-weight: 600;
-      line-height: 1.3;
-      color: var(--text);
-      margin: 6px 0 8px;
-    }
-
-    /* ── TIMER ──────────────────────────────────────────── */
-    .timer {
-      font-family: var(--mono);
-      font-size: 54px;
-      font-weight: 600;
-      letter-spacing: -2px;
-      line-height: 1;
-      color: var(--text);
-      margin: 10px 0 4px;
-      transition: color 0.4s;
-    }
-
-    .timer.t-warn   { color: var(--warn); }
-    .timer.t-danger { color: var(--danger); }
-
-    .timer-sub {
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.06em;
-      color: var(--text3);
-      text-transform: uppercase;
-      margin-bottom: 10px;
-    }
-
-    .timer-track {
-      height: 3px;
-      background: var(--bg3);
-      border-radius: 2px;
-      margin-bottom: 14px;
-      overflow: hidden;
-    }
-
-    .timer-fill {
-      height: 100%;
-      border-radius: 2px;
-      background: var(--accent);
-      width: 0%;
-      transition: width 1s linear, background 0.4s;
-    }
-
-    /* ── RABBIT HOLE WARNING ────────────────────────────── */
-    .rh-warn {
-      background: var(--danger2);
-      border: 1px solid var(--danger);
-      border-radius: var(--r-sm);
-      padding: 10px 12px;
-      margin-bottom: 12px;
-      display: none;
-    }
-
-    .rh-warn.show { display: block; }
-
-    .rh-warn-title {
-      font-family: var(--mono);
-      font-size: 10px;
-      font-weight: 600;
-      color: var(--danger);
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      margin-bottom: 3px;
-    }
-
-    .rh-warn-body {
-      font-size: 12px;
-      color: var(--danger);
-      opacity: 0.85;
-      line-height: 1.45;
-    }
-
-    /* ── EXTENSION PANEL ────────────────────────────────── */
-    .ext-panel {
-      background: var(--bg3);
-      border-radius: var(--r-sm);
-      border: 1px solid var(--border2);
-      padding: 12px;
-      margin-bottom: 12px;
-      display: none;
-    }
-
-    .ext-panel.show { display: block; }
-
-    .ext-panel-label {
-      font-size: 12px;
-      color: var(--text2);
-      margin-bottom: 6px;
-    }
-
-    /* ── BUTTONS ─────────────────────────────────────────── */
-    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
-
+    /* ── BUTTONS ── */
     .btn {
-      flex: 1;
-      min-width: 0;
-      padding: 10px 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 9px 12px;
       border: 1px solid var(--border2);
-      border-radius: var(--r-sm);
+      border-radius: var(--rsm);
       background: transparent;
       font-family: var(--sans);
       font-size: 13px;
       font-weight: 500;
       color: var(--text);
       cursor: pointer;
-      transition: background 0.12s;
+      transition: background 0.1s, opacity 0.1s;
       text-align: center;
       white-space: nowrap;
     }
-
     .btn:active { transform: scale(0.97); }
     .btn:hover  { background: var(--bg3); }
+    .btn.primary  { background: var(--accent);  color: #fff; border-color: transparent; }
+    .btn.primary:hover { opacity: 0.88; }
+    .btn.danger   { background: var(--danger2); color: var(--danger);  border-color: var(--danger); }
+    .btn.warn     { background: var(--warn2);   color: var(--warn);    border-color: var(--warn); }
+    .btn.park     { background: var(--park2);   color: var(--park);    border-color: var(--park); }
+    .btn.info     { background: var(--info2);   color: var(--info);    border-color: var(--info); }
+    .btn.sm { padding: 6px 11px; font-size: 12px; }
+    .btn.xs { padding: 4px 8px;  font-size: 11px; }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+    .btn-row { display: flex; gap: 7px; flex-wrap: wrap; }
 
-    .btn.primary {
-      background: var(--accent);
-      color: #fff;
-      border-color: transparent;
-    }
-
-    .btn.primary:hover { opacity: 0.88; background: var(--accent); }
-
-    .btn.danger {
-      background: var(--danger2);
-      color: var(--danger);
-      border-color: var(--danger);
-    }
-
-    .btn.warn {
-      background: var(--warn2);
-      color: var(--warn);
-      border-color: var(--warn);
-    }
-
-    .btn.sm {
-      flex: 0 0 auto;
-      padding: 7px 12px;
-      font-size: 12px;
-    }
-
-    .btn:disabled { opacity: 0.38; cursor: not-allowed; transform: none; }
-
-    /* ── PRIORITY PILLS ─────────────────────────────────── */
+    /* ── PILLS ── */
     .pill {
       display: inline-block;
       font-family: var(--mono);
-      font-size: 9px;
+      font-size: 8px;
       font-weight: 600;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       padding: 2px 6px;
       border-radius: 3px;
-    }
-
-    .pill.p-critical { background: var(--danger2); color: var(--danger); }
-    .pill.p-value    { background: var(--accent2); color: var(--accent); }
-    .pill.p-nice     { background: var(--bg3);     color: var(--text3);  }
-    .pill.s-ip       { background: var(--info2);   color: var(--info);   }
-    .pill.s-done     { background: var(--accent2); color: var(--accent); }
-    .pill.s-ns       { background: var(--bg3);     color: var(--text3);  }
-
-    /* ── TASK LIST ──────────────────────────────────────── */
-    .task-list { display: flex; flex-direction: column; gap: 7px; }
-
-    .task-row {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-left: 3px solid transparent;
-      border-radius: var(--r);
-      padding: 11px 12px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
-      transition: background 0.1s;
-    }
-
-    .task-row:active { background: var(--bg3); }
-
-    .task-row.lc-critical { border-left-color: var(--danger); }
-    .task-row.lc-value    { border-left-color: var(--accent); }
-    .task-row.lc-nice     { border-left-color: var(--bg3);    }
-    .task-row.is-active   { background: var(--accent2); border-left-color: var(--accent); border-color: var(--accent); }
-    .task-row.is-done     { opacity: 0.55; }
-
-    .task-row-left { flex: 1; min-width: 0; }
-
-    .task-row-name {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text);
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin-bottom: 3px;
     }
+    .p-critical { background: var(--danger2); color: var(--danger); }
+    .p-value    { background: var(--accent2); color: var(--accent); }
+    .p-nice     { background: var(--bg3);     color: var(--text3);  }
+    .s-ip       { background: var(--info2);   color: var(--info);   }
+    .s-done     { background: var(--accent2); color: var(--accent); }
+    .s-ns       { background: var(--bg3);     color: var(--text3);  }
 
-    .task-row.is-done .task-row-name { text-decoration: line-through; }
-
-    .task-row-pills { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
-
-    .task-row-right {
-      flex-shrink: 0;
-      text-align: right;
-    }
-
-    .task-time-badge {
+    /* ── TAG CHIP ── */
+    .tag-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
       font-family: var(--mono);
-      font-size: 10px;
-      color: var(--text3);
-    }
-
-    .active-dot {
-      display: inline-block;
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--accent);
-      margin-right: 2px;
-      animation: pulse 1.5s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0.4; }
-    }
-
-    /* ── SECTION TITLE ──────────────────────────────────── */
-    .sec-title {
-      font-family: var(--mono);
-      font-size: 9px;
-      letter-spacing: 0.12em;
+      font-size: 8px;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
-      color: var(--text3);
-      margin: 14px 0 7px;
+      color: var(--text2);
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      padding: 2px 7px;
+      border-radius: 10px;
+      cursor: default;
     }
+    .tag-chip .tc-x {
+      cursor: pointer;
+      opacity: 0.55;
+      font-size: 10px;
+      line-height: 1;
+      margin-left: 2px;
+    }
+    .tag-chip .tc-x:hover { opacity: 1; }
+    .tags-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
 
-    /* ── DIVIDER ────────────────────────────────────────── */
-    .divider { height: 1px; background: var(--border); margin: 13px 0; }
-
-    /* ── FORMS ──────────────────────────────────────────── */
-    .form-group { margin-bottom: 12px; }
+    /* ── FORMS ── */
+    .form-group { margin-bottom: 11px; }
     .form-group:last-child { margin-bottom: 0; }
-
     .form-lbl {
       display: block;
       font-family: var(--mono);
@@ -517,15 +320,12 @@
       color: var(--text3);
       margin-bottom: 5px;
     }
-
-    input[type="text"],
-    input[type="number"],
-    textarea,
-    select {
+    input[type="text"], input[type="number"], input[type="date"],
+    textarea, select {
       width: 100%;
       background: var(--bg);
       border: 1px solid var(--border2);
-      border-radius: var(--r-sm);
+      border-radius: var(--rsm);
       padding: 9px 11px;
       font-family: var(--sans);
       font-size: 14px;
@@ -533,89 +333,403 @@
       appearance: none;
       -webkit-appearance: none;
     }
-
     input:focus, textarea:focus, select:focus {
       outline: none;
       border-color: var(--accent);
     }
-
-    textarea {
-      resize: vertical;
-      min-height: 75px;
-      line-height: 1.5;
-    }
-
+    input[type="date"] { color-scheme: light dark; }
+    textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
     select option { background: var(--bg); color: var(--text); }
 
-    /* ── PROGRESS BAR ───────────────────────────────────── */
+    /* ── DIVIDER / SECTION TITLE ── */
+    .divider  { height: 1px; background: var(--border); margin: 11px 0; }
+    .sec-title {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin: 14px 0 7px;
+    }
+
+    /* ── PROGRESS BAR ── */
     .prog-track {
-      height: 4px;
+      height: 3px;
       background: var(--bg3);
       border-radius: 2px;
       overflow: hidden;
-      margin-top: 7px;
     }
-
     .prog-fill {
       height: 100%;
       background: var(--accent);
       border-radius: 2px;
       transition: width 0.5s ease;
     }
+    .prog-fill.warn   { background: var(--warn);   }
+    .prog-fill.danger { background: var(--danger);  }
 
-    /* ── BUDGET DISPLAY ─────────────────────────────────── */
-    .budget-blocks {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0,1fr));
-      gap: 8px;
-      margin-bottom: 14px;
-    }
-
-    .budget-block {
-      border-radius: var(--r-sm);
-      padding: 10px;
+    /* ── EMPTY STATE ── */
+    .empty {
       text-align: center;
+      padding: 32px 16px;
+      color: var(--text3);
+      font-size: 13px;
+      line-height: 1.55;
     }
+    .empty-icon { font-size: 26px; margin-bottom: 7px; opacity: 0.6; }
 
-    .budget-block .bv {
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      background: var(--text);
+      color: var(--bg);
+      padding: 7px 16px;
+      border-radius: 20px;
       font-family: var(--mono);
-      font-size: 17px;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 300;
+      white-space: nowrap;
+      transition: opacity 0.18s, transform 0.18s;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 2px; }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+    /* ╔══════════════════════════════════════════════════╗
+       ║  FOCUS TAB                                       ║
+       ╚══════════════════════════════════════════════════╝ */
+    .focus-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 15px;
+      margin-bottom: 10px;
+      transition: border-color 0.3s;
+    }
+    .focus-card.active-state  { border-color: var(--accent); }
+    .focus-card.warn-state    { border-color: var(--warn); }
+    .focus-card.danger-state  { border-color: var(--danger); }
+
+    .focus-task-name {
+      font-size: 15px;
       font-weight: 600;
+      line-height: 1.35;
+      color: var(--text);
+      margin: 6px 0 6px;
+    }
+    .focus-pills { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 4px; }
+
+    /* Timer */
+    .timer {
+      font-family: var(--mono);
+      font-size: 50px;
+      font-weight: 600;
+      letter-spacing: -2px;
       line-height: 1;
+      color: var(--text);
+      margin: 10px 0 3px;
+      transition: color 0.4s;
+    }
+    .timer.tw { color: var(--warn); }
+    .timer.td { color: var(--danger); animation: timerPulse 1.8s ease-in-out infinite; }
+    @keyframes timerPulse {
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0.65; }
     }
 
-    .budget-block .bl {
+    .timer-sub {
       font-family: var(--mono);
       font-size: 9px;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: var(--text3);
+      margin-bottom: 9px;
+    }
+    .timer-track { height: 3px; background: var(--bg3); border-radius: 2px; overflow: hidden; margin-bottom: 13px; }
+    .timer-fill  { height: 100%; border-radius: 2px; background: var(--accent); width: 0%; transition: width 1s linear, background 0.4s; }
+
+    /* Rabbit hole warning banner */
+    .rh-warn {
+      background: var(--danger2);
+      border: 1px solid var(--danger);
+      border-radius: var(--rsm);
+      padding: 9px 12px;
+      margin-bottom: 11px;
+      display: none;
+    }
+    .rh-warn.show { display: block; }
+    .rh-warn-title { font-family: var(--mono); font-size: 9px; font-weight: 600; color: var(--danger); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 2px; }
+    .rh-warn-body  { font-size: 12px; color: var(--danger); opacity: 0.85; line-height: 1.4; }
+
+    /* Extension panel */
+    .ext-panel {
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: var(--rsm);
+      padding: 11px;
+      margin-bottom: 11px;
+      display: none;
+    }
+    .ext-panel.show { display: block; }
+    .ext-panel-lbl { font-size: 12px; color: var(--text2); margin-bottom: 6px; line-height: 1.4; }
+
+    /* DoD checklist on focus card */
+    .dod-section { margin: 10px 0; }
+    .dod-title {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 6px;
+    }
+    .dod-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 5px 0;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .dod-item:last-child { border-bottom: none; }
+    .dod-cb {
+      width: 16px; height: 16px;
+      border: 1.5px solid var(--border2);
+      border-radius: 3px;
+      flex-shrink: 0;
+      margin-top: 1px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .dod-cb.checked { background: var(--accent); border-color: var(--accent); }
+    .dod-cb.checked::after { content: '✓'; color: #fff; font-size: 10px; }
+    .dod-text { font-size: 13px; color: var(--text2); line-height: 1.4; flex: 1; }
+    .dod-text.checked { text-decoration: line-through; color: var(--text3); }
+    .dod-progress {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--text3);
+      margin-top: 4px;
+    }
+    .dod-progress.complete { color: var(--accent); }
+
+    /* No-task placeholder */
+    .no-task { text-align: center; padding: 22px 12px; color: var(--text3); }
+    .no-task .ntm { font-size: 13px; color: var(--text2); margin-bottom: 3px; }
+    .no-task .nts { font-size: 12px; }
+
+    /* ╔══════════════════════════════════════════════════╗
+       ║  TASKS TAB                                       ║
+       ╚══════════════════════════════════════════════════╝ */
+    .task-row {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-left: 3px solid transparent;
+      border-radius: var(--r);
+      padding: 10px 12px;
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      cursor: pointer;
+      transition: background 0.1s;
+      margin-bottom: 7px;
+    }
+    .task-row:active  { background: var(--bg3); }
+    .task-row.lc-crit { border-left-color: var(--danger); }
+    .task-row.lc-val  { border-left-color: var(--accent); }
+    .task-row.lc-nice { border-left-color: var(--bg4); }
+    .task-row.is-act  { background: var(--accent2); border-left-color: var(--accent); border-color: var(--accent); }
+    .task-row.is-done { opacity: 0.5; }
+
+    .tr-left  { flex: 1; min-width: 0; }
+    .tr-right { flex-shrink: 0; text-align: right; padding-top: 1px; }
+
+    .tr-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+    .task-row.is-done .tr-name { text-decoration: line-through; }
+
+    .tr-pills { display: flex; gap: 3px; flex-wrap: wrap; align-items: center; }
+    .tr-meta  {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--text3);
       margin-top: 3px;
     }
 
-    .budget-block.focus-blk { background: var(--accent2); }
-    .budget-block.focus-blk .bv { color: var(--accent); }
-    .budget-block.pt-blk    { background: var(--warn2);   }
-    .budget-block.pt-blk .bv    { color: var(--warn); }
-    .budget-block.misc-blk  { background: var(--bg3);     }
-    .budget-block.misc-blk .bv  { color: var(--text2); }
+    .active-dot {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
 
-    /* ── DAILY LOG ──────────────────────────────────────── */
+    .dod-badge {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--text3);
+      white-space: nowrap;
+    }
+    .dod-badge.c-done { color: var(--accent); }
+
+    /* ╔══════════════════════════════════════════════════╗
+       ║  DAY VIEW TAB                                    ║
+       ╚══════════════════════════════════════════════════╝ */
+    .day-toggle {
+      display: flex;
+      gap: 7px;
+      margin-bottom: 12px;
+    }
+    .day-toggle-btn {
+      flex: 1;
+      padding: 9px;
+      border: 1px solid var(--border2);
+      border-radius: var(--rsm);
+      background: transparent;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text2);
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.12s, color 0.12s;
+    }
+    .day-toggle-btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: transparent;
+    }
+
+    .day-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 8px;
+    }
+    .day-header-date {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .day-header-hrs {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text3);
+    }
+
+    .day-schedule { margin-bottom: 10px; }
+
+    .day-task-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-left: 3px solid transparent;
+      border-radius: var(--r);
+      padding: 10px 12px;
+      margin-bottom: 7px;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+    }
+    .day-task-card:active { background: var(--bg3); }
+    .day-task-card.lc-crit { border-left-color: var(--danger); }
+    .day-task-card.lc-val  { border-left-color: var(--accent); }
+    .day-task-card.lc-nice { border-left-color: var(--bg4); }
+    .day-task-card.overdue { background: var(--danger2); border-color: var(--danger); }
+
+    .dtc-left  { flex: 1; min-width: 0; }
+    .dtc-right { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .dtc-name  { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dtc-pills { display: flex; gap: 3px; flex-wrap: wrap; }
+    .dtc-time  { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+
+    .unpin-btn {
+      background: none;
+      border: none;
+      color: var(--text3);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 0 2px;
+      line-height: 1;
+    }
+    .unpin-btn:hover { color: var(--danger); }
+
+    .day-capacity {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text3);
+      margin-bottom: 4px;
+    }
+    .day-capacity .over { color: var(--warn); }
+
+    /* Backlog in day view */
+    .backlog-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--rsm);
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      cursor: pointer;
+    }
+    .backlog-row:active { background: var(--bg3); }
+    .backlog-name { flex: 1; font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .backlog-actions { display: flex; gap: 5px; flex-shrink: 0; }
+
+    /* ╔══════════════════════════════════════════════════╗
+       ║  BUDGET TAB                                      ║
+       ╚══════════════════════════════════════════════════╝ */
+    .budget-blocks {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 8px;
+      margin-bottom: 13px;
+    }
+    .budget-block { border-radius: var(--rsm); padding: 10px; text-align: center; }
+    .budget-block .bv { font-family: var(--mono); font-size: 17px; font-weight: 600; line-height: 1; }
+    .budget-block .bl { font-family: var(--mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); margin-top: 3px; }
+    .bb-focus  { background: var(--accent2); }
+    .bb-focus .bv { color: var(--accent); }
+    .bb-pt     { background: var(--warn2); }
+    .bb-pt .bv { color: var(--warn); }
+    .bb-misc   { background: var(--bg3); }
+    .bb-misc .bv { color: var(--text2); }
+
+    /* Daily log */
     .log-entry {
       display: flex;
       align-items: baseline;
       gap: 8px;
-      padding: 7px 0;
+      padding: 6px 0;
       border-bottom: 1px solid var(--border);
       font-size: 13px;
     }
-
     .log-entry:last-child { border-bottom: none; }
-
     .log-name { flex: 1; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .log-dur  { font-family: var(--mono); font-size: 11px; color: var(--text3); flex-shrink: 0; }
-
-    .day-group-header {
+    .log-dur  { font-family: var(--mono); font-size: 10px; color: var(--text3); flex-shrink: 0; }
+    .day-group-hdr {
       font-family: var(--mono);
       font-size: 9px;
       text-transform: uppercase;
@@ -626,160 +740,268 @@
       justify-content: space-between;
     }
 
-    /* ── ARCHIVE ────────────────────────────────────────── */
+    /* Interval check settings */
+    .ic-status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 0;
+    }
+    .ic-status-label { font-size: 13px; color: var(--text2); }
+    .ic-countdown {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--accent);
+    }
+
+    /* Toggle switch */
+    .toggle-wrap { display: flex; align-items: center; gap: 8px; }
+    .toggle {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--bg4);
+      border-radius: 10px;
+      transition: background 0.2s;
+      cursor: pointer;
+    }
+    .toggle input:checked ~ .toggle-track { background: var(--accent); }
+    .toggle-thumb {
+      position: absolute;
+      top: 2px; left: 2px;
+      width: 16px; height: 16px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+      pointer-events: none;
+    }
+    .toggle input:checked ~ .toggle-track ~ .toggle-thumb { transform: translateX(16px); }
+
+    /* ╔══════════════════════════════════════════════════╗
+       ║  ARCHIVE TAB                                     ║
+       ╚══════════════════════════════════════════════════╝ */
     .archive-row {
       background: var(--bg2);
       border: 1px solid var(--border);
       border-left: 3px solid var(--accent);
       border-radius: var(--r);
-      padding: 11px 13px;
-      margin-bottom: 8px;
+      padding: 10px 12px;
+      margin-bottom: 7px;
       cursor: pointer;
     }
-
     .archive-row:active { background: var(--bg3); }
-
     .archive-name { font-size: 14px; font-weight: 500; color: var(--text); }
+    .archive-meta { font-family: var(--mono); font-size: 9px; color: var(--text3); margin-top: 3px; display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+    .archive-notes { font-size: 12px; color: var(--text3); margin-top: 4px; line-height: 1.4; }
 
-    .archive-meta {
-      font-family: var(--mono);
-      font-size: 10px;
-      color: var(--text3);
-      margin-top: 4px;
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
+    /* Parked observations */
+    .po-card {
+      background: var(--park2);
+      border: 1px solid var(--park);
+      border-radius: var(--r);
+      padding: 11px 13px;
+      margin-bottom: 7px;
+      cursor: pointer;
     }
+    .po-card:active { opacity: 0.8; }
+    .po-title  { font-size: 14px; font-weight: 600; color: var(--park); }
+    .po-meta   { font-family: var(--mono); font-size: 9px; color: var(--park); opacity: 0.65; margin-top: 3px; display: flex; gap: 6px; flex-wrap: wrap; }
+    .po-desc   { font-size: 12px; color: var(--text2); margin-top: 5px; line-height: 1.4; }
 
-    .archive-notes {
-      font-size: 12px;
-      color: var(--text3);
-      margin-top: 5px;
-      line-height: 1.4;
-    }
-
-    /* ── EXPORT ─────────────────────────────────────────── */
+    /* Export box */
     .export-box {
       background: var(--bg3);
-      border-radius: var(--r-sm);
       border: 1px solid var(--border2);
-      padding: 13px;
+      border-radius: var(--rsm);
+      padding: 12px;
       font-family: var(--mono);
       font-size: 11px;
       color: var(--text2);
-      line-height: 1.75;
+      line-height: 1.7;
       white-space: pre-wrap;
       word-break: break-word;
-      max-height: 320px;
+      max-height: 300px;
       overflow-y: auto;
       margin: 10px 0;
     }
 
-    /* ── BOTTOM SHEET ───────────────────────────────────── */
+    /* ╔══════════════════════════════════════════════════╗
+       ║  BOTTOM SHEET                                    ║
+       ╚══════════════════════════════════════════════════╝ */
     .sheet-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.48);
-      z-index: 50;
+      background: rgba(0,0,0,0.5);
+      z-index: 60;
       display: none;
       align-items: flex-end;
       justify-content: center;
     }
-
     .sheet-overlay.open { display: flex; }
-
     .sheet-inner {
       width: 100%;
       max-width: 430px;
       background: var(--bg);
       border-radius: var(--r) var(--r) 0 0;
-      padding: 0 18px max(28px, env(safe-area-inset-bottom, 28px));
-      max-height: 88dvh;
+      padding: 0 16px max(28px, env(safe-area-inset-bottom, 28px));
+      max-height: 90dvh;
       overflow-y: auto;
       animation: sheetUp 0.22s ease;
     }
-
     @keyframes sheetUp {
-      from { transform: translateY(24px); opacity: 0; }
+      from { transform: translateY(20px); opacity: 0; }
       to   { transform: none; opacity: 1; }
     }
-
     .sheet-handle {
-      width: 36px; height: 4px;
+      width: 34px; height: 4px;
       background: var(--border2);
       border-radius: 2px;
-      margin: 12px auto 16px;
+      margin: 11px auto 15px;
     }
-
     .sheet-title {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 600;
       color: var(--text);
-      margin-bottom: 16px;
+      margin-bottom: 14px;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-
-    /* ── TOAST ──────────────────────────────────────────── */
-    .toast {
-      position: fixed;
-      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-      left: 50%;
-      transform: translateX(-50%) translateY(12px);
-      background: var(--text);
-      color: var(--bg);
-      padding: 8px 16px;
-      border-radius: 20px;
+    .sheet-section {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .sheet-section-title {
       font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 10px;
+    }
+
+    /* Exit criteria editor */
+    .ec-list { display: flex; flex-direction: column; gap: 5px; margin-bottom: 8px; }
+    .ec-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--bg3);
+      border-radius: var(--rsm);
+      padding: 7px 9px;
+    }
+    .ec-text { flex: 1; font-size: 13px; color: var(--text2); line-height: 1.35; }
+    .ec-del  { background: none; border: none; color: var(--text3); font-size: 16px; cursor: pointer; padding: 0; line-height: 1; flex-shrink: 0; }
+    .ec-del:hover { color: var(--danger); }
+    .ec-add-row { display: flex; gap: 6px; }
+    .ec-add-row input { flex: 1; }
+
+    /* Tag input */
+    .tag-presets { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+    .tag-preset-btn {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      background: transparent;
+      color: var(--text2);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .tag-preset-btn:hover  { background: var(--bg3); }
+    .tag-preset-btn.active { background: var(--bg3); border-color: var(--accent); color: var(--accent); }
+
+    /* ╔══════════════════════════════════════════════════╗
+       ║  INTERVAL CHECK OVERLAY                         ║
+       ╚══════════════════════════════════════════════════╝ */
+    .ic-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 87, 64, 0.92);
+      z-index: 100;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 20px max(32px, env(safe-area-inset-bottom));
+    }
+    .ic-overlay.show { display: flex; animation: icFade 0.25s ease; }
+    @keyframes icFade { from { opacity: 0; } to { opacity: 1; } }
+
+    .ic-inner {
+      width: 100%;
+      max-width: 390px;
+      background: var(--bg);
+      border-radius: 16px;
+      padding: 22px 20px;
+      max-height: 85dvh;
+      overflow-y: auto;
+    }
+    .ic-eyebrow {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .ic-pulse {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .ic-question {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+      margin-bottom: 6px;
+    }
+    .ic-task-name {
+      font-size: 13px;
+      color: var(--text2);
+      margin-bottom: 14px;
+      font-style: italic;
+    }
+    .ic-dod-wrap {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--rsm);
+      padding: 10px 12px;
+      margin-bottom: 14px;
+    }
+    .ic-dod-title {
+      font-family: var(--mono);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text3);
+      margin-bottom: 7px;
+    }
+    .ic-no-dod {
       font-size: 12px;
-      letter-spacing: 0.04em;
-      opacity: 0;
-      pointer-events: none;
-      z-index: 200;
-      white-space: nowrap;
-      transition: opacity 0.2s, transform 0.2s;
-    }
-
-    .toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-
-    /* ── EMPTY STATE ────────────────────────────────────── */
-    .empty {
-      text-align: center;
-      padding: 36px 20px;
       color: var(--text3);
-    }
-
-    .empty .e-icon {
-      font-size: 28px;
-      margin-bottom: 8px;
-      opacity: 0.6;
-    }
-
-    .empty p { font-size: 13px; line-height: 1.5; }
-
-    /* ── NO-TASK PLACEHOLDER ────────────────────────────── */
-    .no-task {
       text-align: center;
-      padding: 22px 16px;
-      color: var(--text3);
+      padding: 8px 0;
     }
-
-    .no-task .nt-main { font-size: 13px; color: var(--text2); margin-bottom: 3px; }
-    .no-task .nt-sub  { font-size: 12px; }
-
-    /* ── SCROLLBAR ──────────────────────────────────────── */
-    ::-webkit-scrollbar { width: 2px; }
-    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
-
-    /* ── QUICK-ADD INLINE ───────────────────────────────── */
-    .inline-add { display: flex; gap: 7px; }
-    .inline-add input { flex: 1; }
-    .inline-add select { flex: 0 0 130px; }
+    .ic-btn-row { display: flex; flex-direction: column; gap: 8px; }
+    .ic-btn-row .btn { justify-content: center; padding: 13px; font-size: 14px; }
   </style>
 </head>
 <body>
@@ -793,73 +1015,71 @@
 
   <!-- ── TAB NAV ──────────────────────────────────────── -->
   <nav class="tab-nav">
-    <button class="tab-btn active" onclick="switchTab('focus')">Focus</button>
-    <button class="tab-btn" onclick="switchTab('tasks')">Tasks</button>
-    <button class="tab-btn" onclick="switchTab('budget')">Budget</button>
-    <button class="tab-btn" onclick="switchTab('archive')">Archive</button>
+    <button class="tab-btn active"  onclick="switchTab('focus')">Focus</button>
+    <button class="tab-btn"         onclick="switchTab('tasks')">Tasks</button>
+    <button class="tab-btn"         onclick="switchTab('day')">Day</button>
+    <button class="tab-btn"         onclick="switchTab('budget')">Budget</button>
+    <button class="tab-btn"         onclick="switchTab('archive')">Archive</button>
   </nav>
 
   <!-- ══════════════════════════════════════════════════════
-       TAB 1 — FOCUS
+       PANE 1: FOCUS
   ══════════════════════════════════════════════════════ -->
   <div class="tab-pane active" id="pane-focus">
 
-    <!-- Stats strip -->
     <div class="stats-grid">
-      <div class="stat-cell">
-        <div class="stat-val" id="s-hrs">--</div>
-        <div class="stat-lbl">hrs left</div>
-      </div>
-      <div class="stat-cell">
-        <div class="stat-val c-danger" id="s-crit">0</div>
-        <div class="stat-lbl">critical</div>
-      </div>
-      <div class="stat-cell">
-        <div class="stat-val c-good" id="s-done">0</div>
-        <div class="stat-lbl">done</div>
-      </div>
+      <div class="stat-cell"><div class="stat-val" id="s-hrs">--</div><div class="stat-lbl">hrs left</div></div>
+      <div class="stat-cell"><div class="stat-val cd" id="s-crit">0</div><div class="stat-lbl">critical</div></div>
+      <div class="stat-cell"><div class="stat-val ca" id="s-done">0</div><div class="stat-lbl">done</div></div>
     </div>
 
     <!-- Active task card -->
     <div class="focus-card" id="focus-card">
       <div class="card-label">Active task</div>
 
-      <!-- Empty state -->
       <div class="no-task" id="fc-empty">
-        <div class="nt-main">No active task</div>
-        <div class="nt-sub">Tasks tab → tap a task → Activate</div>
+        <div class="ntm">No active task</div>
+        <div class="nts">Tasks or Day tab → tap task → Activate</div>
       </div>
 
-      <!-- Active state -->
       <div id="fc-active" style="display:none">
         <div class="focus-task-name" id="fc-name">—</div>
-        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:2px;" id="fc-pills"></div>
+        <div class="focus-pills" id="fc-pills"></div>
 
         <div class="timer" id="timer">00:00:00</div>
         <div class="timer-sub" id="timer-sub">session in progress</div>
         <div class="timer-track"><div class="timer-fill" id="timer-fill"></div></div>
 
+        <!-- Definition of Done checklist (live during session) -->
+        <div class="dod-section" id="fc-dod-section" style="display:none">
+          <div class="dod-title">Definition of done</div>
+          <div id="fc-dod-list"></div>
+          <div class="dod-progress" id="fc-dod-progress"></div>
+        </div>
+
+        <div class="divider"></div>
+
         <!-- Rabbit hole warning -->
         <div class="rh-warn" id="rh-warn">
           <div class="rh-warn-title">⚠ Rabbit hole — re-evaluate now</div>
-          <div class="rh-warn-body" id="rh-body">Over 90 min on this task. Is this still the highest-impact use of your focus time?</div>
+          <div class="rh-warn-body" id="rh-body">Over limit. Is this still the best use of your focus time?</div>
         </div>
 
-        <!-- Extension panel (requires reason) -->
+        <!-- Extension requires reason -->
         <div class="ext-panel" id="ext-panel">
-          <div class="ext-panel-label">Log your reason before extending +30 min:</div>
+          <div class="ext-panel-lbl">Enter your reason to extend +30 min — this is logged:</div>
           <input type="text" id="ext-reason" placeholder="e.g. Awaiting population data from risk team…" />
           <div class="btn-row" style="margin-top:8px;">
             <button class="btn warn" onclick="confirmExtension()">Confirm +30 min</button>
-            <button class="btn sm" onclick="cancelExtension()">Cancel</button>
+            <button class="btn sm"   onclick="cancelExtension()">Cancel</button>
           </div>
         </div>
 
-        <!-- Action buttons -->
         <div class="btn-row">
           <button class="btn danger" onclick="completeTask()">Mark done</button>
-          <button class="btn" onclick="pauseTask()">Pause</button>
-          <button class="btn warn" id="ext-btn" onclick="requestExtension()">+30 min</button>
+          <button class="btn"        onclick="pauseTask()">Pause</button>
+          <button class="btn warn"   onclick="requestExtension()">+30 min</button>
+          <button class="btn park sm" onclick="openPoSheet(null)">🔍 Park obs</button>
         </div>
       </div>
     </div>
@@ -870,58 +1090,60 @@
       <div id="battle-list"></div>
     </div>
 
-  </div><!-- /pane-focus -->
+  </div>
 
   <!-- ══════════════════════════════════════════════════════
-       TAB 2 — TASKS
+       PANE 2: TASKS
   ══════════════════════════════════════════════════════ -->
   <div class="tab-pane" id="pane-tasks">
 
-    <!-- Quick add card -->
     <div class="card">
-      <div class="card-label">Add task</div>
+      <div class="card-label">Quick add task</div>
       <div class="form-group">
         <input type="text" id="new-name" placeholder="Task description…"
                onkeydown="if(event.key==='Enter') addTask()" />
       </div>
-      <div class="inline-add">
-        <select id="new-priority">
+      <div style="display:flex;gap:7px;margin-bottom:9px;">
+        <select id="new-priority" style="flex:1;">
           <option value="critical">Critical</option>
           <option value="value" selected>Value-Add</option>
           <option value="nice">Nice-to-Have</option>
         </select>
-        <button class="btn primary" onclick="addTask()" style="flex:0 0 auto;">Add</button>
+        <input type="date" id="new-due" style="flex:1;" />
       </div>
+      <button class="btn primary" onclick="addTask()" style="width:100%;">Add task</button>
     </div>
 
-    <!-- Task list -->
     <div id="task-list-wrap"></div>
 
-  </div><!-- /pane-tasks -->
+  </div>
 
   <!-- ══════════════════════════════════════════════════════
-       TAB 3 — BUDGET
+       PANE 3: DAY VIEW
+  ══════════════════════════════════════════════════════ -->
+  <div class="tab-pane" id="pane-day">
+
+    <div class="day-toggle">
+      <button class="day-toggle-btn active" id="day-btn-today" onclick="switchDayView('today')">Today</button>
+      <button class="day-toggle-btn"        id="day-btn-tmrw"  onclick="switchDayView('tmrw')">Tomorrow</button>
+    </div>
+
+    <div id="day-content"></div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       PANE 4: BUDGET
   ══════════════════════════════════════════════════════ -->
   <div class="tab-pane" id="pane-budget">
 
-    <!-- Allocation blocks -->
     <div class="card">
       <div class="card-label">Weekly allocation</div>
       <div class="budget-blocks">
-        <div class="budget-block focus-blk">
-          <div class="bv" id="b-focus">--h</div>
-          <div class="bl">focus</div>
-        </div>
-        <div class="budget-block pt-blk">
-          <div class="bv" id="b-pt">3.5h</div>
-          <div class="bl">training</div>
-        </div>
-        <div class="budget-block misc-blk">
-          <div class="bv" id="b-misc">4.0h</div>
-          <div class="bl">misc</div>
-        </div>
+        <div class="budget-block bb-focus"><div class="bv" id="b-focus">--h</div><div class="bl">focus</div></div>
+        <div class="budget-block bb-pt">   <div class="bv" id="b-pt">3.5h</div><div class="bl">training</div></div>
+        <div class="budget-block bb-misc"> <div class="bv" id="b-misc">4.0h</div><div class="bl">misc</div></div>
       </div>
-
       <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:3px;">
         <span>Focus time used this week</span>
         <span id="b-used-lbl" style="font-family:var(--mono);">0 / --h</span>
@@ -929,7 +1151,31 @@
       <div class="prog-track"><div class="prog-fill" id="b-prog"></div></div>
     </div>
 
-    <!-- Daily time log -->
+    <!-- Interval check settings -->
+    <div class="card">
+      <div class="card-label">Interval focus check</div>
+      <div class="ic-status">
+        <div>
+          <div style="font-size:13px;font-weight:500;color:var(--text);">60-min DoD check</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px;">Vibrates + asks "Are you on your DoD list?"</div>
+        </div>
+        <label class="toggle" title="Enable interval check">
+          <input type="checkbox" id="ic-toggle" onchange="toggleIntervalCheck(this.checked)" />
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+      <div class="form-group" style="margin-top:8px;">
+        <label class="form-lbl">Check interval (minutes)</label>
+        <input type="number" id="s-ic-mins" value="60" min="15" max="120" step="15" onchange="saveSettings()" />
+      </div>
+      <div class="ic-status" style="padding-top:6px;padding-bottom:0;">
+        <span style="font-size:12px;color:var(--text3);">Next check in</span>
+        <span class="ic-countdown" id="ic-countdown">—</span>
+      </div>
+    </div>
+
+    <!-- Session log -->
     <div class="card">
       <div class="card-label">Session log — this week</div>
       <div id="daily-log"></div>
@@ -937,7 +1183,7 @@
 
     <!-- Settings -->
     <div class="card">
-      <div class="card-label">Settings — weekly hours</div>
+      <div class="card-label">Settings</div>
       <div class="form-group">
         <label class="form-lbl">Total work hours / week</label>
         <input type="number" id="s-total" value="40" min="1" max="80" onchange="saveSettings()" />
@@ -956,90 +1202,199 @@
       </div>
     </div>
 
-  </div><!-- /pane-budget -->
+  </div>
 
   <!-- ══════════════════════════════════════════════════════
-       TAB 4 — ARCHIVE
+       PANE 5: ARCHIVE
   ══════════════════════════════════════════════════════ -->
   <div class="tab-pane" id="pane-archive">
 
-    <!-- Performance summary export -->
+    <!-- Performance export -->
     <div class="card">
       <div class="card-label">Performance summary export</div>
-      <p style="font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:11px;">
-        Generate a formatted summary of all completed tasks for manager
-        check-ins, project retrospectives, and end-of-cycle reviews.
+      <p style="font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:10px;">
+        Formats all completed tasks into a structured summary for manager check-ins,
+        project retrospectives, and end-of-cycle reviews.
       </p>
       <div class="btn-row">
         <button class="btn primary" onclick="genExport()">Generate summary</button>
-        <button class="btn" id="copy-btn" style="display:none;" onclick="copyExport()">Copy</button>
+        <button class="btn" id="copy-btn" style="display:none;" onclick="copyExport()">Copy text</button>
       </div>
       <div id="export-wrap" style="display:none;">
         <div class="export-box" id="export-text"></div>
       </div>
     </div>
 
+    <!-- Parked observations -->
+    <div class="sec-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Parked observations</span>
+      <button class="btn xs park" onclick="openPoSheet(null)">+ New</button>
+    </div>
+    <div id="po-list-wrap"></div>
+
     <!-- Completed tasks -->
     <div class="sec-title">Completed tasks — evidence log</div>
     <div id="archive-wrap"></div>
 
-  </div><!-- /pane-archive -->
+  </div>
 
 </div><!-- /#app -->
 
 <!-- ══════════════════════════════════════════════════════
-     TASK DETAIL BOTTOM SHEET
+     TASK DETAIL SHEET
 ══════════════════════════════════════════════════════ -->
-<div class="sheet-overlay" id="sheet" onclick="handleSheetClick(event)">
+<div class="sheet-overlay" id="task-sheet" onclick="handleSheetClick(event,'task-sheet')">
   <div class="sheet-inner">
     <div class="sheet-handle"></div>
-
     <div class="sheet-title">
-      <span id="sh-title">Task</span>
-      <button class="btn sm" onclick="closeSheet()">Close</button>
+      <span id="sh-title">Edit task</span>
+      <button class="btn sm" onclick="closeSheet('task-sheet')">Close</button>
     </div>
 
-    <div class="form-group">
-      <label class="form-lbl">Task name</label>
-      <input type="text" id="sh-name" placeholder="Task description…" />
+    <!-- Core info -->
+    <div class="sheet-section">
+      <div class="sheet-section-title">Core</div>
+      <div class="form-group">
+        <label class="form-lbl">Task name</label>
+        <input type="text" id="sh-name" placeholder="Task description…" />
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="form-group">
+          <label class="form-lbl">Priority</label>
+          <select id="sh-priority">
+            <option value="critical">Critical</option>
+            <option value="value">Value-Add</option>
+            <option value="nice">Nice-to-Have</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-lbl">Status</label>
+          <select id="sh-status">
+            <option value="not-started">Not Started</option>
+            <option value="in-progress">In Progress</option>
+            <option value="done">Done</option>
+          </select>
+        </div>
+      </div>
     </div>
 
-    <div class="form-group">
-      <label class="form-lbl">Priority</label>
-      <select id="sh-priority">
-        <option value="critical">Critical</option>
-        <option value="value">Value-Add</option>
-        <option value="nice">Nice-to-Have</option>
-      </select>
+    <!-- Planning -->
+    <div class="sheet-section">
+      <div class="sheet-section-title">Planning</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:9px;">
+        <div class="form-group">
+          <label class="form-lbl">Due date</label>
+          <input type="date" id="sh-due" />
+        </div>
+        <div class="form-group">
+          <label class="form-lbl">Est. hours</label>
+          <input type="number" id="sh-est" placeholder="1.5" min="0.25" max="40" step="0.25" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-lbl">Tags / project</label>
+        <div style="display:flex;gap:6px;">
+          <input type="text" id="sh-tag-input" placeholder="Type tag + Enter" style="flex:1;"
+                 onkeydown="if(event.key==='Enter'||event.key===','){event.preventDefault();addTag()}" />
+          <button class="btn sm" onclick="addTag()">Add</button>
+        </div>
+        <div class="tags-row" id="sh-tags-display"></div>
+        <div class="tag-presets" id="sh-tag-presets"></div>
+      </div>
     </div>
 
-    <div class="form-group">
-      <label class="form-lbl">Status</label>
-      <select id="sh-status">
-        <option value="not-started">Not Started</option>
-        <option value="in-progress">In Progress</option>
-        <option value="done">Done</option>
-      </select>
+    <!-- Definition of done -->
+    <div class="sheet-section">
+      <div class="sheet-section-title">Definition of done (exit criteria)</div>
+      <div class="ec-list" id="ec-list"></div>
+      <div class="ec-add-row">
+        <input type="text" id="ec-input" placeholder="e.g. Population extracted and documented"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();addExitCriteria()}" />
+        <button class="btn sm" onclick="addExitCriteria()">Add</button>
+      </div>
     </div>
 
-    <div class="form-group">
-      <label class="form-lbl">Notes / evidence links / workpaper refs</label>
-      <textarea id="sh-notes" placeholder="GW link, rabbit hole log, finding ref…"></textarea>
+    <!-- Notes -->
+    <div class="sheet-section">
+      <div class="sheet-section-title">Notes / evidence links</div>
+      <textarea id="sh-notes" placeholder="GW link, workpaper ref, observation notes…"></textarea>
     </div>
 
-    <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:12px;" id="sh-meta"></div>
+    <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-bottom:11px;" id="sh-meta"></div>
 
-    <div class="divider"></div>
-
-    <div class="btn-row">
+    <div class="btn-row" style="margin-bottom:7px;">
       <button class="btn primary" onclick="saveSheet()">Save</button>
-      <button class="btn danger" id="sh-activate-btn" onclick="activateFromSheet()">Activate</button>
-      <button class="btn sm" onclick="deleteFromSheet()" style="color:var(--text3);">Delete</button>
+      <button class="btn info"    id="sh-activate-btn" onclick="activateFromSheet()">Activate</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn park sm" onclick="openPoFromTask()">🔍 Log rabbit hole</button>
+      <button class="btn sm" style="color:var(--danger);border-color:var(--danger);" onclick="deleteFromSheet()">Delete</button>
     </div>
   </div>
 </div>
 
-<!-- Toast -->
+<!-- ══════════════════════════════════════════════════════
+     PARKED OBSERVATION SHEET
+══════════════════════════════════════════════════════ -->
+<div class="sheet-overlay" id="po-sheet" onclick="handleSheetClick(event,'po-sheet')">
+  <div class="sheet-inner">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">
+      <span>🔍 Parked observation</span>
+      <button class="btn sm" onclick="closeSheet('po-sheet')">Close</button>
+    </div>
+    <p style="font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:14px;">
+      Interesting but non-critical. Park it here — only review it if you have spare time.
+    </p>
+    <div class="sheet-section">
+      <div class="form-group">
+        <label class="form-lbl">Heading / title</label>
+        <input type="text" id="po-title" placeholder="e.g. Unusual FX settlement pattern Feb data" />
+      </div>
+      <div class="form-group">
+        <label class="form-lbl">Brief description</label>
+        <textarea id="po-desc" placeholder="What you noticed and why it's interesting…" style="min-height:80px;"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-lbl">Project tag</label>
+        <input type="text" id="po-project" placeholder="e.g. Market Risk, Credit Risk…" />
+        <div class="tag-presets" id="po-tag-presets" style="margin-top:6px;"></div>
+      </div>
+    </div>
+    <div id="po-source-label" style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-bottom:10px;"></div>
+    <div class="btn-row">
+      <button class="btn primary" onclick="savePo()">Park it</button>
+      <button class="btn sm" id="po-del-btn" style="display:none;color:var(--danger);border-color:var(--danger);" onclick="deletePo()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     INTERVAL CHECK OVERLAY
+══════════════════════════════════════════════════════ -->
+<div class="ic-overlay" id="ic-overlay">
+  <div class="ic-inner">
+    <div class="ic-eyebrow"><div class="ic-pulse"></div> 60-minute focus check</div>
+    <div class="ic-question">Is what you're doing right now on your Definition of Done list?</div>
+    <div class="ic-task-name" id="ic-task-name"></div>
+
+    <div class="ic-dod-wrap">
+      <div class="ic-dod-title">Your exit criteria</div>
+      <div id="ic-dod-content"></div>
+    </div>
+
+    <div class="ic-btn-row">
+      <button class="btn primary" style="font-size:15px;padding:14px;" onclick="icDismiss('on-track')">
+        ✓ On track — keep going
+      </button>
+      <button class="btn danger" style="font-size:15px;padding:14px;" onclick="icDismiss('pivoting')">
+        ↩ Off track — pivoting back now
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
 <div class="toast" id="toast"></div>
 
 <!-- ══════════════════════════════════════════════════════
@@ -1047,141 +1402,296 @@
 ══════════════════════════════════════════════════════ -->
 <script>
 'use strict';
-// ─────────────────────────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════
 // STATE
-// All data lives in localStorage under the key 'blncr_v2'.
-// ─────────────────────────────────────────────────────────
-const DEFAULT_STATE = {
-  tasks:          [],       // [{id, name, priority, status, notes, createdAt, doneAt, totalMins, weekCreated}]
-  sessions:       [],       // [{taskId, taskName, start, end, durationMins, weekStart}]
-  extensions:     [],       // [{taskId, reason, at, newLimit}]
-  activeTaskId:   null,
-  activeStart:    null,     // ISO string
-  sessionLimit:   90,       // minutes — current session's warning threshold
-  weekStart:      null,     // 'YYYY-MM-DD' Monday
-  nextId:         1,
+// ═══════════════════════════════════════════════════════
+const DEFAULTS = {
+  tasks:       [],
+  // {id, name, priority, status, tags[], exitCriteria[], exitCriteriaDone[],
+  //  dueDate, estimatedHrs, dayPinned, notes, createdAt, doneAt, totalMins, weekCreated}
+  parkedObs:   [],
+  // {id, title, desc, projectTag, sourceTaskId, createdAt}
+  sessions:    [],
+  extensions:  [],
+  activeTaskId:  null,
+  activeStart:   null,
+  sessionLimit:  90,
+  weekStart:     null,
+  nextId:        1,
   settings: {
-    totalHours:   40,
-    ptHours:      3.5,
-    miscHours:    4.0,
-    timerLimit:   90        // default hyperfocus limit in minutes
+    totalHours:          40,
+    ptHours:             3.5,
+    miscHours:           4.0,
+    timerLimit:          90,
+    intervalCheckMins:   60,
+    intervalCheckEnabled: false,
+    lastCheckAt:         null,
+    dayView:             'today'
   }
 };
 
-let S = { ...DEFAULT_STATE };
+let S = JSON.parse(JSON.stringify(DEFAULTS));
 
 function save() {
-  try { localStorage.setItem('blncr_v2', JSON.stringify(S)); } catch(e) {}
+  try { localStorage.setItem('blncr_v3', JSON.stringify(S)); } catch(e) {}
 }
 
 function load() {
   try {
-    const raw = localStorage.getItem('blncr_v2');
-    if (raw) S = Object.assign({}, DEFAULT_STATE, JSON.parse(raw));
+    const raw = localStorage.getItem('blncr_v3');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Deep-merge settings so new keys get defaults
+      S = Object.assign({}, DEFAULTS, parsed);
+      S.settings = Object.assign({}, DEFAULTS.settings, parsed.settings || {});
+    }
   } catch(e) {}
   checkWeekReset();
 }
 
-// ─────────────────────────────────────────────────────────
-// WEEK LOGIC
-// ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+// DATE / WEEK UTILS
+// ═══════════════════════════════════════════════════════
+function todayStr()    { return new Date().toISOString().slice(0,10); }
+function tomorrowStr() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0,10);
+}
+
 function getMondayStr(d) {
   d = d ? new Date(d) : new Date();
   const day = d.getDay();
-  const diff = (day === 0 ? -6 : 1 - day);
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString().slice(0, 10);
+  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
+  d.setHours(0,0,0,0);
+  return d.toISOString().slice(0,10);
 }
 
-function checkWeekReset() {
-  const monday = getMondayStr();
-  if (S.weekStart !== monday) {
-    S.weekStart = monday;
-    save();
-  }
-}
-
-function getWeekNum(dateStr) {
-  const d = new Date(dateStr || new Date());
-  d.setHours(0, 0, 0, 0);
+function getWeekNum() {
+  const d = new Date();
+  d.setHours(0,0,0,0);
   d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
   const jan4 = new Date(d.getFullYear(), 0, 4);
   return 1 + Math.round(((d - jan4) / 86400000 - 3 + ((jan4.getDay() + 6) % 7)) / 7);
 }
 
-// ─────────────────────────────────────────────────────────
+function checkWeekReset() {
+  const monday = getMondayStr();
+  if (S.weekStart !== monday) { S.weekStart = monday; save(); }
+}
+
+function fmtDateStr(str) {
+  if (!str) return '';
+  const d = new Date(str.length === 10 ? str + 'T00:00:00' : str);
+  return d.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+function pad(n) { return String(n).padStart(2,'0'); }
+function fmtMins(m) {
+  m = Math.round(m || 0);
+  if (m < 1) return '<1m';
+  if (m < 60) return `${m}m`;
+  return `${Math.floor(m/60)}h ${m%60}m`;
+}
+
+// ═══════════════════════════════════════════════════════
 // TIMER ENGINE
-// ─────────────────────────────────────────────────────────
-let _timerInterval = null;
+// ═══════════════════════════════════════════════════════
+let _timerInt = null;
 
 function startTimer() {
-  stopTimer();
-  _timerInterval = setInterval(tickTimer, 1000);
+  clearInterval(_timerInt);
+  _timerInt = setInterval(tickTimer, 1000);
   tickTimer();
 }
 
 function stopTimer() {
-  clearInterval(_timerInterval);
-  _timerInterval = null;
+  clearInterval(_timerInt);
+  _timerInt = null;
 }
 
 function tickTimer() {
   if (!S.activeTaskId || !S.activeStart) { stopTimer(); return; }
 
   const elapsed = (Date.now() - new Date(S.activeStart).getTime()) / 1000;
-  const h  = Math.floor(elapsed / 3600);
-  const m  = Math.floor((elapsed % 3600) / 60);
-  const sec = Math.floor(elapsed % 60);
-  const display = `${pad(h)}:${pad(m)}:${pad(sec)}`;
+  const h = Math.floor(elapsed / 3600);
+  const m = Math.floor((elapsed % 3600) / 60);
+  const s = Math.floor(elapsed % 60);
   const elMins  = elapsed / 60;
-  const limit   = S.sessionLimit || S.settings.timerLimit || 90;
+  const limit   = S.sessionLimit || 90;
+  const NEAR    = limit - 5;
 
-  const timerEl = $('timer');
-  const fillEl  = $('timer-fill');
-  const subEl   = $('timer-sub');
-  const warnEl  = $('rh-warn');
-  const bodyEl  = $('rh-body');
+  const el = $('timer');
+  if (!el) return;
 
-  if (!timerEl) return;
+  el.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
 
-  timerEl.textContent = display;
+  const pct  = Math.min((elMins / limit) * 100, 100);
+  const fill = $('timer-fill');
+  const sub  = $('timer-sub');
+  const warn = $('rh-warn');
 
-  // Progress bar
-  const pct = Math.min((elMins / limit) * 100, 100);
-  fillEl.style.width = pct + '%';
-
-  const NEAR = limit - 5;
+  fill.style.width = pct + '%';
 
   if (elMins >= limit) {
-    timerEl.className = 'timer t-danger';
-    fillEl.style.background = 'var(--danger)';
-    subEl.textContent = `${Math.floor(elMins)} MIN — RABBIT HOLE ALERT`;
-    warnEl.classList.add('show');
-    bodyEl.textContent = `${Math.floor(elMins)} min on this task. Mandatory re-evaluation — is this still the highest-impact use of your remaining focus time?`;
+    el.className = 'timer td';
+    fill.style.background = 'var(--danger)';
+    sub.textContent = `${Math.floor(elMins)}MIN — RABBIT HOLE ALERT`;
+    warn.classList.add('show');
+    $('rh-body').textContent = `${Math.floor(elMins)} min on this task. Mandatory re-evaluation.`;
+    $('focus-card').className = 'focus-card danger-state';
   } else if (elMins >= NEAR) {
-    timerEl.className = 'timer t-warn';
-    fillEl.style.background = 'var(--warn)';
-    subEl.textContent = `${Math.floor(elMins)} min — approaching ${limit} min limit`;
-    warnEl.classList.remove('show');
+    el.className = 'timer tw';
+    fill.style.background = 'var(--warn)';
+    sub.textContent = `${Math.floor(elMins)} min — approaching ${limit}m limit`;
+    warn.classList.remove('show');
+    $('focus-card').className = 'focus-card warn-state';
   } else {
-    timerEl.className = 'timer';
-    fillEl.style.background = 'var(--accent)';
-    subEl.textContent = `${Math.floor(elMins)} min in session`;
-    warnEl.classList.remove('show');
+    el.className = 'timer';
+    fill.style.background = 'var(--accent)';
+    sub.textContent = `${Math.floor(elMins)} min in session`;
+    warn.classList.remove('show');
+    $('focus-card').className = 'focus-card active-state';
   }
 }
 
-function pad(n) { return String(n).padStart(2, '0'); }
+// ═══════════════════════════════════════════════════════
+// INTERVAL CHECK ENGINE
+// ═══════════════════════════════════════════════════════
+let _icInt = null;
 
-// ─────────────────────────────────────────────────────────
-// TASK ACTIONS
-// ─────────────────────────────────────────────────────────
-function activateTask(id) {
-  // Close any existing session first
-  if (S.activeTaskId && S.activeTaskId !== id) {
-    closeSession('switched task');
+function startIntervalCheck() {
+  clearInterval(_icInt);
+  if (!S.settings.intervalCheckEnabled) { updateIcCountdown(); return; }
+  _icInt = setInterval(checkIntervalTick, 30000); // check every 30s
+  checkIntervalTick();
+}
+
+function checkIntervalTick() {
+  if (!S.settings.intervalCheckEnabled) return;
+  if (!S.activeTaskId) { updateIcCountdown(); return; }
+
+  const ref  = S.settings.lastCheckAt || S.activeStart;
+  if (!ref) { updateIcCountdown(); return; }
+
+  const mins = (Date.now() - new Date(ref).getTime()) / 60000;
+  const limit = S.settings.intervalCheckMins || 60;
+
+  updateIcCountdown(limit - mins);
+
+  if (mins >= limit) triggerIntervalCheck();
+}
+
+function updateIcCountdown(minsLeft) {
+  const el = $('ic-countdown');
+  if (!el) return;
+  if (!S.settings.intervalCheckEnabled) { el.textContent = 'off'; return; }
+  if (!S.activeTaskId) { el.textContent = '— (no active task)'; return; }
+  if (minsLeft === undefined) { el.textContent = '—'; return; }
+  if (minsLeft <= 0) { el.textContent = 'now'; return; }
+  el.textContent = `${Math.round(Math.max(0, minsLeft))}m`;
+}
+
+function triggerIntervalCheck() {
+  // Vibrate if available
+  if ('vibrate' in navigator) {
+    navigator.vibrate([300, 100, 300, 100, 300]);
   }
+
+  S.settings.lastCheckAt = new Date().toISOString();
+  save();
+
+  // Populate overlay
+  const task = S.activeTaskId ? S.tasks.find(t => t.id === S.activeTaskId) : null;
+  $('ic-task-name').textContent = task ? `"${task.name}"` : 'No active task set';
+
+  const dodWrap = $('ic-dod-content');
+  if (task && task.exitCriteria && task.exitCriteria.length) {
+    dodWrap.innerHTML = task.exitCriteria.map((c, i) => `
+      <div class="dod-item" onclick="toggleDodFromIc(${i})">
+        <div class="dod-cb ${(task.exitCriteriaDone||[])[i] ? 'checked' : ''}"></div>
+        <div class="dod-text ${(task.exitCriteriaDone||[])[i] ? 'checked' : ''}">${esc(c)}</div>
+      </div>`).join('');
+  } else {
+    dodWrap.innerHTML = `<div class="ic-no-dod">No exit criteria defined for this task.</div>`;
+  }
+
+  $('ic-overlay').classList.add('show');
+}
+
+function toggleDodFromIc(idx) {
+  const task = S.activeTaskId ? S.tasks.find(t => t.id === S.activeTaskId) : null;
+  if (!task) return;
+  if (!task.exitCriteriaDone) task.exitCriteriaDone = [];
+  task.exitCriteriaDone[idx] = !task.exitCriteriaDone[idx];
+  save();
+
+  // Re-render the dod in the overlay
+  const dodWrap = $('ic-dod-content');
+  dodWrap.innerHTML = task.exitCriteria.map((c, i) => `
+    <div class="dod-item" onclick="toggleDodFromIc(${i})">
+      <div class="dod-cb ${(task.exitCriteriaDone||[])[i] ? 'checked' : ''}"></div>
+      <div class="dod-text ${(task.exitCriteriaDone||[])[i] ? 'checked' : ''}">${esc(c)}</div>
+    </div>`).join('');
+
+  renderFocusDod(task);
+}
+
+function icDismiss(outcome) {
+  $('ic-overlay').classList.remove('show');
+  if (outcome === 'pivoting') toast('Pivoting — get back to your DoD ↑');
+  else toast('On track — keep going');
+  renderFocus();
+}
+
+function toggleIntervalCheck(enabled) {
+  S.settings.intervalCheckEnabled = enabled;
+  save();
+  startIntervalCheck();
+  updateIcCountdown();
+}
+
+// Page Visibility — re-check when user returns to app
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) checkIntervalTick();
+});
+
+// ═══════════════════════════════════════════════════════
+// TASK CRUD
+// ═══════════════════════════════════════════════════════
+function addTask() {
+  const name = $('new-name').value.trim();
+  if (!name) { toast('Enter a task name'); return; }
+
+  S.tasks.unshift({
+    id:               't' + (S.nextId++),
+    name,
+    priority:         $('new-priority').value,
+    status:           'not-started',
+    tags:             [],
+    exitCriteria:     [],
+    exitCriteriaDone: [],
+    dueDate:          $('new-due').value || null,
+    estimatedHrs:     null,
+    dayPinned:        null,
+    notes:            '',
+    createdAt:        new Date().toISOString(),
+    doneAt:           null,
+    totalMins:        0,
+    weekCreated:      S.weekStart
+  });
+
+  $('new-name').value = '';
+  $('new-due').value  = '';
+  save();
+  renderTaskList();
+  renderFocus();
+  toast('Task added');
+}
+
+function activateTask(id) {
+  if (S.activeTaskId && S.activeTaskId !== id) closeSession('switched');
 
   S.activeTaskId = id;
   S.activeStart  = new Date().toISOString();
@@ -1190,12 +1700,17 @@ function activateTask(id) {
   const task = S.tasks.find(t => t.id === id);
   if (task && task.status !== 'done') task.status = 'in-progress';
 
+  // Reset interval check timer when new task starts
+  if (S.settings.intervalCheckEnabled) {
+    S.settings.lastCheckAt = new Date().toISOString();
+  }
+
   save();
   renderFocus();
   renderTaskList();
   switchTab('focus');
   startTimer();
-  toast('Task activated');
+  toast('Task activated — timer started');
 }
 
 function pauseTask() {
@@ -1226,149 +1741,318 @@ function completeTask() {
   renderFocus();
   renderTaskList();
   renderArchive();
-  toast('Marked done — great work!');
+  toast('Done — great work! ✓');
 }
 
 function closeSession(note) {
   if (!S.activeTaskId || !S.activeStart) return;
-  const start = new Date(S.activeStart);
-  const end   = new Date();
-  const dur   = Math.max(1, Math.round((end - start) / 60000));
-
+  const dur = Math.max(1, Math.round((Date.now() - new Date(S.activeStart).getTime()) / 60000));
   const task = S.tasks.find(t => t.id === S.activeTaskId);
   S.sessions.push({
-    taskId:      S.activeTaskId,
-    taskName:    task ? task.name : 'Unknown',
-    start:       S.activeStart,
-    end:         end.toISOString(),
+    taskId:       S.activeTaskId,
+    taskName:     task ? task.name : '?',
+    start:        S.activeStart,
+    end:          new Date().toISOString(),
     durationMins: dur,
-    weekStart:   S.weekStart,
+    weekStart:    S.weekStart,
     note
   });
-
   if (task) task.totalMins = (task.totalMins || 0) + dur;
 }
 
-// Extension (requires typed reason)
-function requestExtension() {
-  $('ext-panel').classList.add('show');
-  $('ext-reason').focus();
-}
-
-function cancelExtension() {
-  $('ext-panel').classList.remove('show');
-  $('ext-reason').value = '';
-}
-
+// Extension requires reason
+function requestExtension() { $('ext-panel').classList.add('show'); $('ext-reason').focus(); }
+function cancelExtension()  { $('ext-panel').classList.remove('show'); $('ext-reason').value = ''; }
 function confirmExtension() {
   const reason = $('ext-reason').value.trim();
-  if (!reason) { toast('Please enter a reason first'); return; }
-
+  if (!reason) { toast('Type your reason first'); return; }
   S.sessionLimit += 30;
-  S.extensions.push({
-    taskId:     S.activeTaskId,
-    reason,
-    at:         new Date().toISOString(),
-    newLimit:   S.sessionLimit
-  });
-
+  S.extensions.push({ taskId: S.activeTaskId, reason, at: new Date().toISOString(), newLimit: S.sessionLimit });
   $('ext-panel').classList.remove('show');
   $('ext-reason').value = '';
   $('rh-warn').classList.remove('show');
-
   save();
-  toast(`Extended — new limit: ${S.sessionLimit} min`);
+  toast(`Extended → new limit: ${S.sessionLimit}m`);
 }
 
-// ─────────────────────────────────────────────────────────
-// TASK CRUD
-// ─────────────────────────────────────────────────────────
-function addTask() {
-  const name = $('new-name').value.trim();
-  if (!name) { toast('Enter a task name'); return; }
-  const priority = $('new-priority').value;
-
-  S.tasks.unshift({
-    id:          't' + (S.nextId++),
-    name,
-    priority,
-    status:      'not-started',
-    notes:       '',
-    createdAt:   new Date().toISOString(),
-    doneAt:      null,
-    totalMins:   0,
-    weekCreated: S.weekStart
-  });
-
-  $('new-name').value = '';
+// Pinning tasks to day view
+function pinToDay(taskId, dateStr) {
+  const task = S.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  task.dayPinned = task.dayPinned === dateStr ? null : dateStr;
   save();
+  renderDayView();
   renderTaskList();
-  renderFocus();
-  toast('Task added');
+  toast(task.dayPinned ? 'Pinned to day' : 'Removed from day');
 }
 
-// ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+// PARKED OBSERVATIONS CRUD
+// ═══════════════════════════════════════════════════════
+let _editPoId     = null;
+let _poSourceTask = null;
+
+function openPoSheet(poId) {
+  _editPoId = poId;
+
+  if (poId) {
+    const po = S.parkedObs.find(p => p.id === poId);
+    if (!po) return;
+    $('po-title').value     = po.title;
+    $('po-desc').value      = po.desc;
+    $('po-project').value   = po.projectTag || '';
+    $('po-del-btn').style.display = 'inline-flex';
+    $('po-source-label').textContent = '';
+    _poSourceTask = po.sourceTaskId || null;
+  } else {
+    $('po-title').value   = '';
+    $('po-desc').value    = '';
+    $('po-project').value = '';
+    $('po-del-btn').style.display = 'none';
+
+    // If called from active task context, pre-fill project tag
+    if (_editId && !poId) {
+      const t = S.tasks.find(x => x.id === _editId);
+      if (t && t.tags && t.tags.length) $('po-project').value = t.tags[0];
+      _poSourceTask = _editId;
+    } else if (S.activeTaskId && !poId && !_editId) {
+      const t = S.tasks.find(x => x.id === S.activeTaskId);
+      if (t && t.tags && t.tags.length) $('po-project').value = t.tags[0];
+      _poSourceTask = S.activeTaskId;
+    } else {
+      _poSourceTask = null;
+    }
+
+    if (_poSourceTask) {
+      const st = S.tasks.find(t => t.id === _poSourceTask);
+      $('po-source-label').textContent = st ? `Linked from: ${st.name}` : '';
+    } else {
+      $('po-source-label').textContent = '';
+    }
+  }
+
+  renderPoTagPresets('po-tag-presets', 'po-project');
+  openSheet('po-sheet');
+}
+
+function openPoFromTask() {
+  closeSheet('task-sheet');
+  setTimeout(() => openPoSheet(null), 200);
+}
+
+function savePo() {
+  const title   = $('po-title').value.trim();
+  const desc    = $('po-desc').value.trim();
+  const project = $('po-project').value.trim();
+
+  if (!title) { toast('Enter a title'); return; }
+
+  if (_editPoId) {
+    const po = S.parkedObs.find(p => p.id === _editPoId);
+    if (po) { po.title = title; po.desc = desc; po.projectTag = project; }
+  } else {
+    S.parkedObs.unshift({
+      id:           'po' + (S.nextId++),
+      title,
+      desc,
+      projectTag:   project,
+      sourceTaskId: _poSourceTask,
+      createdAt:    new Date().toISOString()
+    });
+  }
+
+  save();
+  closeSheet('po-sheet');
+  renderArchive();
+  toast('Observation parked 🔍');
+}
+
+function deletePo() {
+  if (!_editPoId || !confirm('Delete this observation?')) return;
+  S.parkedObs = S.parkedObs.filter(p => p.id !== _editPoId);
+  save();
+  closeSheet('po-sheet');
+  renderArchive();
+  toast('Deleted');
+}
+
+// ═══════════════════════════════════════════════════════
 // SETTINGS
-// ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 function saveSettings() {
-  S.settings.totalHours  = parseFloat($('s-total').value)  || 40;
-  S.settings.ptHours     = parseFloat($('s-pt').value)     || 3.5;
-  S.settings.miscHours   = parseFloat($('s-misc').value)   || 4.0;
-  S.settings.timerLimit  = parseInt($('s-timer').value)    || 90;
+  S.settings.totalHours         = parseFloat($('s-total').value)   || 40;
+  S.settings.ptHours            = parseFloat($('s-pt').value)      || 3.5;
+  S.settings.miscHours          = parseFloat($('s-misc').value)    || 4.0;
+  S.settings.timerLimit         = parseInt($('s-timer').value)     || 90;
+  S.settings.intervalCheckMins  = parseInt($('s-ic-mins').value)   || 60;
   save();
   renderBudget();
   toast('Settings saved');
 }
 
-// ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+// TAG HELPERS
+// ═══════════════════════════════════════════════════════
+const TAG_PRESETS = [
+  'Audit', 'Market Risk', 'Credit Risk', 'Liquidity',
+  'Operational Risk', 'Training', 'Admin', 'Team Support', 'Ad-hoc'
+];
+
+let _editTags = [];
+
+function renderTagDisplay() {
+  const wrap = $('sh-tags-display');
+  if (!wrap) return;
+  wrap.innerHTML = _editTags.map((t, i) =>
+    `<span class="tag-chip">${esc(t)}<span class="tc-x" onclick="removeTag(${i})">×</span></span>`
+  ).join('');
+}
+
+function renderShTagPresets() {
+  const wrap = $('sh-tag-presets');
+  if (!wrap) return;
+  wrap.innerHTML = TAG_PRESETS.map(p =>
+    `<button class="tag-preset-btn ${_editTags.includes(p) ? 'active' : ''}"
+             onclick="togglePresetTag('${p}')">${p}</button>`
+  ).join('');
+}
+
+function renderPoTagPresets(wrapId, inputId) {
+  const wrap = $(wrapId);
+  if (!wrap) return;
+  wrap.innerHTML = TAG_PRESETS.map(p =>
+    `<button class="tag-preset-btn" onclick="$('${inputId}').value='${p}'">${p}</button>`
+  ).join('');
+}
+
+function addTag() {
+  const val = $('sh-tag-input').value.trim().replace(/,$/, '');
+  if (!val || _editTags.includes(val)) { $('sh-tag-input').value = ''; return; }
+  _editTags.push(val);
+  $('sh-tag-input').value = '';
+  renderTagDisplay();
+  renderShTagPresets();
+}
+
+function removeTag(idx) {
+  _editTags.splice(idx, 1);
+  renderTagDisplay();
+  renderShTagPresets();
+}
+
+function togglePresetTag(tag) {
+  if (_editTags.includes(tag)) { _editTags = _editTags.filter(t => t !== tag); }
+  else { _editTags.push(tag); }
+  renderTagDisplay();
+  renderShTagPresets();
+}
+
+// ═══════════════════════════════════════════════════════
+// EXIT CRITERIA (DoD) HELPERS
+// ═══════════════════════════════════════════════════════
+let _editEC = [];
+let _editECDone = [];
+
+function renderEcList() {
+  const wrap = $('ec-list');
+  if (!wrap) return;
+  if (_editEC.length === 0) {
+    wrap.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:4px 0;">No criteria yet. Add exit criteria below.</div>';
+    return;
+  }
+  wrap.innerHTML = _editEC.map((c, i) =>
+    `<div class="ec-item">
+       <div class="ec-text">${esc(c)}</div>
+       <button class="ec-del" onclick="removeEc(${i})">×</button>
+     </div>`
+  ).join('');
+}
+
+function addExitCriteria() {
+  const val = $('ec-input').value.trim();
+  if (!val) return;
+  _editEC.push(val);
+  _editECDone.push(false);
+  $('ec-input').value = '';
+  renderEcList();
+}
+
+function removeEc(idx) {
+  _editEC.splice(idx, 1);
+  _editECDone.splice(idx, 1);
+  renderEcList();
+}
+
+// ═══════════════════════════════════════════════════════
 // TASK DETAIL SHEET
-// ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 let _editId = null;
 
-function openSheet(id) {
+function openTaskSheet(id) {
   const t = S.tasks.find(x => x.id === id);
   if (!t) return;
   _editId = id;
+  _editTags  = [...(t.tags  || [])];
+  _editEC    = [...(t.exitCriteria    || [])];
+  _editECDone = [...(t.exitCriteriaDone || [])];
 
-  $('sh-title').textContent    = t.name.length > 34 ? t.name.slice(0, 34) + '…' : t.name;
-  $('sh-name').value           = t.name;
-  $('sh-priority').value       = t.priority;
-  $('sh-status').value         = t.status;
-  $('sh-notes').value          = t.notes || '';
-
-  const mins  = t.totalMins || 0;
-  const metaP = [
-    t.createdAt ? 'Created ' + fmtDate(t.createdAt.slice(0,10)) : '',
-    t.doneAt    ? 'Done '    + fmtDate(t.doneAt.slice(0,10))    : '',
-    mins        ? fmtMins(mins) + ' logged'                      : ''
-  ].filter(Boolean).join(' · ');
-
-  $('sh-meta').textContent = metaP;
+  $('sh-title').textContent   = t.name.length > 32 ? t.name.slice(0,32)+'…' : t.name;
+  $('sh-name').value          = t.name;
+  $('sh-priority').value      = t.priority;
+  $('sh-status').value        = t.status;
+  $('sh-due').value           = t.dueDate    || '';
+  $('sh-est').value           = t.estimatedHrs != null ? t.estimatedHrs : '';
+  $('sh-notes').value         = t.notes      || '';
 
   const actBtn = $('sh-activate-btn');
-  actBtn.textContent = S.activeTaskId === id ? 'Active ✓' : 'Activate';
+  actBtn.textContent = S.activeTaskId === id ? '▶ Active' : 'Activate';
   actBtn.disabled    = S.activeTaskId === id;
 
-  $('sheet').classList.add('open');
+  const meta = [
+    t.createdAt ? 'Created ' + fmtDateStr(t.createdAt) : '',
+    t.doneAt    ? 'Done '    + fmtDateStr(t.doneAt)    : '',
+    t.totalMins ? fmtMins(t.totalMins) + ' logged'     : ''
+  ].filter(Boolean).join(' · ');
+  $('sh-meta').textContent = meta;
+
+  renderTagDisplay();
+  renderShTagPresets();
+  renderEcList();
+  openSheet('task-sheet');
 }
 
-function closeSheet() {
-  $('sheet').classList.remove('open');
-  _editId = null;
+function openSheet(id) {
+  $('task-sheet').classList.remove('open');
+  $('po-sheet').classList.remove('open');
+  $(id).classList.add('open');
 }
 
-function handleSheetClick(e) {
-  if (e.target === $('sheet')) closeSheet();
+function closeSheet(id) {
+  $(id).classList.remove('open');
+  if (id === 'task-sheet') { _editId = null; _editTags = []; _editEC = []; _editECDone = []; }
+  if (id === 'po-sheet')   { _editPoId = null; _poSourceTask = null; }
 }
+
+function handleSheetClick(e, id) { if (e.target === $(id)) closeSheet(id); }
 
 function saveSheet() {
   if (!_editId) return;
   const t = S.tasks.find(x => x.id === _editId);
   if (!t) return;
 
-  t.name     = $('sh-name').value.trim() || t.name;
-  t.priority = $('sh-priority').value;
-  t.notes    = $('sh-notes').value;
+  t.name          = $('sh-name').value.trim() || t.name;
+  t.priority      = $('sh-priority').value;
+  t.dueDate       = $('sh-due').value  || null;
+  t.estimatedHrs  = parseFloat($('sh-est').value) || null;
+  t.notes         = $('sh-notes').value;
+  t.tags          = [..._editTags];
+  t.exitCriteria  = [..._editEC];
+
+  // Preserve existing done states; extend/trim to match new criteria length
+  const existingDone = t.exitCriteriaDone || [];
+  t.exitCriteriaDone = _editEC.map((_, i) =>
+    i < existingDone.length ? existingDone[i] : false
+  );
 
   const newStatus = $('sh-status').value;
   if (newStatus === 'done' && t.status !== 'done') {
@@ -1386,113 +2070,141 @@ function saveSheet() {
   renderFocus();
   renderTaskList();
   renderArchive();
-  closeSheet();
+  closeSheet('task-sheet');
   toast('Saved');
 }
 
 function activateFromSheet() {
   const id = _editId;
-  closeSheet();
+  closeSheet('task-sheet');
   activateTask(id);
 }
 
 function deleteFromSheet() {
-  if (!_editId) return;
-  if (!confirm('Delete this task?')) return;
-
-  if (S.activeTaskId === _editId) {
-    stopTimer();
-    S.activeTaskId = null;
-    S.activeStart  = null;
-  }
-
+  if (!_editId || !confirm('Delete this task?')) return;
+  if (S.activeTaskId === _editId) { stopTimer(); S.activeTaskId = null; S.activeStart = null; }
   S.tasks    = S.tasks.filter(t => t.id !== _editId);
   S.sessions = S.sessions.filter(s => s.taskId !== _editId);
   save();
-  renderFocus();
-  renderTaskList();
-  renderArchive();
-  closeSheet();
+  renderFocus(); renderTaskList(); renderArchive(); renderDayView();
+  closeSheet('task-sheet');
   toast('Deleted');
 }
 
-// ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 // RENDER — FOCUS TAB
-// ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 function renderFocus() {
-  // Stats
-  const hrsLeft = getFocusHrsLeft();
+  const hrsLeft   = getFocusHrsLeft();
   const critCount = S.tasks.filter(t => t.priority === 'critical' && t.status !== 'done').length;
   const doneCount = S.tasks.filter(t => t.status === 'done').length;
 
   $('s-hrs').textContent  = hrsLeft.toFixed(1);
   $('s-crit').textContent = critCount;
   $('s-done').textContent = doneCount;
-  $('wk-badge').textContent = 'WK ' + getWeekNum(S.weekStart);
+  $('wk-badge').textContent = 'WK ' + getWeekNum();
 
-  // Focus card
   const task = S.activeTaskId ? S.tasks.find(t => t.id === S.activeTaskId) : null;
 
   if (task) {
-    $('fc-empty').style.display = 'none';
+    $('fc-empty').style.display  = 'none';
     $('fc-active').style.display = 'block';
-    $('focus-card').className = 'focus-card active-state';
 
     $('fc-name').textContent = task.name;
     $('fc-pills').innerHTML  =
       `<span class="pill p-${task.priority}">${pLabel(task.priority)}</span>` +
-      `<span class="pill s-ip">In Progress</span>`;
+      `<span class="pill s-ip">In Progress</span>` +
+      (task.tags||[]).slice(0,2).map(t => `<span class="tag-chip">${esc(t)}</span>`).join('');
 
+    renderFocusDod(task);
     startTimer();
   } else {
-    $('fc-empty').style.display = 'block';
+    $('fc-empty').style.display  = 'block';
     $('fc-active').style.display = 'none';
     $('focus-card').className = 'focus-card';
     stopTimer();
-    $('timer').textContent     = '00:00:00';
-    $('timer').className       = 'timer';
+    $('timer').textContent = '00:00:00';
+    $('timer').className   = 'timer';
     $('timer-fill').style.width = '0%';
     $('rh-warn').classList.remove('show');
     $('ext-panel').classList.remove('show');
     $('timer-sub').textContent = 'session in progress';
+    $('fc-dod-section').style.display = 'none';
   }
 
   // Battle plan
-  const critical = S.tasks
-    .filter(t => t.priority === 'critical' && t.status !== 'done')
-    .slice(0, 6);
-
+  const critical = S.tasks.filter(t => t.priority === 'critical' && t.status !== 'done').slice(0,6);
   const bl = $('battle-list');
-  if (critical.length === 0) {
-    bl.innerHTML = '<div style="font-size:13px;color:var(--text3);text-align:center;padding:14px 0;">No critical tasks active — great position.</div>';
+  if (!critical.length) {
+    bl.innerHTML = '<div style="font-size:13px;color:var(--text3);text-align:center;padding:12px 0;">No critical tasks — strong position.</div>';
   } else {
-    bl.innerHTML = critical.map(t =>
-      `<div class="log-entry" style="cursor:pointer;" onclick="openSheet('${t.id}')">
-         <div class="log-name" style="font-weight:500;">${esc(t.name)}</div>
-         <span class="pill p-critical">Critical</span>
-       </div>`
+    bl.innerHTML = critical.map(t => `
+      <div class="log-entry" style="cursor:pointer;" onclick="openTaskSheet('${t.id}')">
+        <div class="log-name" style="font-weight:500;">${esc(t.name)}</div>
+        ${t.dueDate ? `<div class="log-dur">${fmtDateStr(t.dueDate)}</div>` : ''}
+      </div>`
     ).join('');
   }
 }
 
-// ─────────────────────────────────────────────────────────
-// RENDER — TASKS TAB
-// ─────────────────────────────────────────────────────────
-function renderTaskList() {
-  const wrap = $('task-list-wrap');
-  if (S.tasks.length === 0) {
-    wrap.innerHTML = `<div class="empty"><div class="e-icon">📋</div><p>No tasks yet.<br>Add your first task above.</p></div>`;
+function renderFocusDod(task) {
+  const sec  = $('fc-dod-section');
+  const list = $('fc-dod-list');
+  const prog = $('fc-dod-progress');
+
+  if (!task || !task.exitCriteria || !task.exitCriteria.length) {
+    sec.style.display = 'none';
     return;
   }
 
-  const pOrd = { critical: 0, value: 1, nice: 2 };
-  const sOrd = { 'in-progress': 0, 'not-started': 1, done: 2 };
+  sec.style.display = 'block';
+  const done  = (task.exitCriteriaDone || []).filter(Boolean).length;
+  const total = task.exitCriteria.length;
+
+  list.innerHTML = task.exitCriteria.map((c, i) => {
+    const checked = (task.exitCriteriaDone || [])[i];
+    return `<div class="dod-item" onclick="toggleDod('${task.id}',${i})">
+      <div class="dod-cb ${checked ? 'checked' : ''}"></div>
+      <div class="dod-text ${checked ? 'checked' : ''}">${esc(c)}</div>
+    </div>`;
+  }).join('');
+
+  prog.textContent = `${done} / ${total} criteria met`;
+  prog.className   = 'dod-progress' + (done === total ? ' complete' : '');
+}
+
+function toggleDod(taskId, idx) {
+  const task = S.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  if (!task.exitCriteriaDone) task.exitCriteriaDone = Array(task.exitCriteria.length).fill(false);
+  task.exitCriteriaDone[idx] = !task.exitCriteriaDone[idx];
+  save();
+  renderFocusDod(task);
+  renderTaskList();
+
+  const done  = task.exitCriteriaDone.filter(Boolean).length;
+  const total = task.exitCriteria.length;
+  if (done === total) toast('All DoD criteria met — consider marking done ✓');
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER — TASKS TAB
+// ═══════════════════════════════════════════════════════
+function renderTaskList() {
+  const wrap = $('task-list-wrap');
+  if (!S.tasks.length) {
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon">📋</div>No tasks yet. Add one above.</div>`;
+    return;
+  }
+
+  const pOrd = { critical:0, value:1, nice:2 };
+  const sOrd = { 'in-progress':0, 'not-started':1, done:2 };
 
   const sorted = [...S.tasks].sort((a, b) => {
     if (a.id === S.activeTaskId) return -1;
     if (b.id === S.activeTaskId) return  1;
-    if (a.status === 'done' && b.status !== 'done') return  1;
-    if (b.status === 'done' && a.status !== 'done') return -1;
+    if (a.status==='done' && b.status!=='done') return  1;
+    if (b.status==='done' && a.status!=='done') return -1;
     if (pOrd[a.priority] !== pOrd[b.priority]) return pOrd[a.priority] - pOrd[b.priority];
     return sOrd[a.status] - sOrd[b.status];
   });
@@ -1500,202 +2212,370 @@ function renderTaskList() {
   const active = sorted.filter(t => t.status !== 'done');
   const done   = sorted.filter(t => t.status === 'done');
 
-  let html = '<div class="task-list">';
+  let html = '';
 
   active.forEach(t => {
-    const isActive = t.id === S.activeTaskId;
-    const liveAdd  = isActive && S.activeStart
-      ? Math.floor((Date.now() - new Date(S.activeStart).getTime()) / 60000)
-      : 0;
-    const mins = (t.totalMins || 0) + liveAdd;
+    const isAct  = t.id === S.activeTaskId;
+    const liveM  = isAct && S.activeStart ? Math.floor((Date.now() - new Date(S.activeStart).getTime())/60000) : 0;
+    const mins   = (t.totalMins||0) + liveM;
+    const ecDone = (t.exitCriteriaDone||[]).filter(Boolean).length;
+    const ecTotal = (t.exitCriteria||[]).length;
+    const overdueFlag = t.dueDate && t.dueDate < todayStr() && t.status !== 'done';
 
     html += `
-      <div class="task-row lc-${t.priority} ${isActive ? 'is-active' : ''}" onclick="openSheet('${t.id}')">
-        <div class="task-row-left">
-          <div class="task-row-name">${esc(t.name)}</div>
-          <div class="task-row-pills">
+      <div class="task-row lc-${lcClass(t.priority)} ${isAct?'is-act':''}
+                  ${overdueFlag ? 'overdue':''}" onclick="openTaskSheet('${t.id}')">
+        <div class="tr-left">
+          <div class="tr-name">${esc(t.name)}</div>
+          <div class="tr-pills">
             <span class="pill p-${t.priority}">${pLabel(t.priority)}</span>
-            <span class="pill s-${t.status === 'in-progress' ? 'ip' : 'ns'}">${sLabel(t.status)}</span>
-            ${isActive ? '<span class="active-dot"></span><span style="font-family:var(--mono);font-size:9px;color:var(--accent);letter-spacing:.08em;">ACTIVE</span>' : ''}
+            <span class="pill s-${t.status==='in-progress'?'ip':'ns'}">${sLabel(t.status)}</span>
+            ${isAct ? '<span class="active-dot"></span>' : ''}
+            ${(t.tags||[]).slice(0,1).map(tg=>`<span class="tag-chip">${esc(tg)}</span>`).join('')}
+            ${overdueFlag ? '<span class="pill" style="background:var(--danger2);color:var(--danger);">Overdue</span>' : ''}
           </div>
+          ${ecTotal > 0 ? `<div class="tr-meta">${ecDone}/${ecTotal} DoD ${t.dueDate?'· due '+fmtDateStr(t.dueDate):''}</div>` :
+                          (t.dueDate?`<div class="tr-meta">Due ${fmtDateStr(t.dueDate)}</div>`:'') }
         </div>
-        <div class="task-row-right">
-          ${mins > 0 ? `<div class="task-time-badge">${fmtMins(mins)}</div>` : ''}
+        <div class="tr-right">
+          ${mins > 0 ? `<div style="font-family:var(--mono);font-size:10px;color:var(--text3);">${fmtMins(mins)}</div>` : ''}
+          ${t.estimatedHrs ? `<div style="font-family:var(--mono);font-size:9px;color:var(--text3);">est ${t.estimatedHrs}h</div>` : ''}
         </div>
       </div>`;
   });
 
-  if (done.length > 0) {
-    html += `<div class="sec-title">Completed</div>`;
+  if (done.length) {
+    html += `<div class="sec-title">Completed (${done.length})</div>`;
     done.forEach(t => {
       html += `
-        <div class="task-row lc-nice is-done" onclick="openSheet('${t.id}')">
-          <div class="task-row-left">
-            <div class="task-row-name">${esc(t.name)}</div>
-            <div class="task-row-pills">
+        <div class="task-row lc-nice is-done" onclick="openTaskSheet('${t.id}')">
+          <div class="tr-left">
+            <div class="tr-name">${esc(t.name)}</div>
+            <div class="tr-pills">
               <span class="pill s-done">Done</span>
               <span class="pill p-${t.priority}">${pLabel(t.priority)}</span>
+              ${(t.tags||[]).slice(0,1).map(tg=>`<span class="tag-chip">${esc(tg)}</span>`).join('')}
             </div>
           </div>
-          <div class="task-row-right">
-            <div class="task-time-badge">${fmtMins(t.totalMins || 0)}</div>
+          <div class="tr-right" style="font-family:var(--mono);font-size:10px;color:var(--text3);">
+            ${fmtMins(t.totalMins||0)}
           </div>
         </div>`;
     });
   }
 
-  html += '</div>';
   wrap.innerHTML = html;
 }
 
-// ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+// RENDER — DAY VIEW
+// ═══════════════════════════════════════════════════════
+let _dayView = 'today';
+
+function switchDayView(which) {
+  _dayView = which;
+  $('day-btn-today').className = 'day-toggle-btn' + (which === 'today' ? ' active' : '');
+  $('day-btn-tmrw').className  = 'day-toggle-btn' + (which === 'tmrw'  ? ' active' : '');
+  renderDayView();
+}
+
+function getAvailHrsPerDay() {
+  const { totalHours, ptHours, miscHours } = S.settings;
+  return Math.max(0, (totalHours - ptHours - miscHours) / 5);
+}
+
+function getTasksForDay(dateStr) {
+  const today = todayStr();
+  return S.tasks.filter(t => {
+    if (t.status === 'done') return false;
+    // Explicitly pinned
+    if (t.dayPinned === dateStr) return true;
+    // Due today or overdue → show in today
+    if (dateStr === today && t.dueDate && t.dueDate <= today) return true;
+    // Due tomorrow → show in tomorrow
+    if (dateStr === tomorrowStr() && t.dueDate === dateStr) return true;
+    return false;
+  });
+}
+
+function getBacklogTasks(todayDateStr, tmrwDateStr) {
+  return S.tasks.filter(t => {
+    if (t.status === 'done') return false;
+    if (t.dayPinned === todayDateStr) return false;
+    if (t.dayPinned === tmrwDateStr)  return false;
+    if (t.dueDate && t.dueDate <= todayDateStr) return false; // already in today
+    if (t.dueDate === tmrwDateStr) return false; // already in tomorrow
+    return true;
+  });
+}
+
+function renderDayView() {
+  const wrap       = $('day-content');
+  const today      = todayStr();
+  const tmrw       = tomorrowStr();
+  const dateStr    = _dayView === 'today' ? today : tmrw;
+  const availHrs   = getAvailHrsPerDay();
+  const tasks      = getTasksForDay(dateStr);
+  const backlog    = getBacklogTasks(today, tmrw);
+
+  // Sort scheduled tasks: overdue first → critical → value → nice → then by due date
+  tasks.sort((a, b) => {
+    const aOvr = a.dueDate && a.dueDate < today;
+    const bOvr = b.dueDate && b.dueDate < today;
+    if (aOvr && !bOvr) return -1;
+    if (!aOvr && bOvr) return  1;
+    const pOrd = { critical:0, value:1, nice:2 };
+    if (pOrd[a.priority] !== pOrd[b.priority]) return pOrd[a.priority] - pOrd[b.priority];
+    if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+    return 0;
+  });
+
+  const totalEstHrs = tasks.reduce((sum, t) => sum + (t.estimatedHrs || 1), 0);
+  const pct         = Math.min((totalEstHrs / availHrs) * 100, 100);
+  const over        = totalEstHrs > availHrs;
+
+  const dayLabel = _dayView === 'today'
+    ? `Today — ${fmtDateStr(today)}`
+    : `Tomorrow — ${fmtDateStr(tmrw)}`;
+
+  let html = `
+    <div class="day-header">
+      <div class="day-header-date">${dayLabel}</div>
+      <div class="day-header-hrs">${availHrs.toFixed(1)}h focus avail.</div>
+    </div>`;
+
+  if (tasks.length) {
+    html += `
+      <div class="day-capacity">
+        <span>Scheduled: ${totalEstHrs.toFixed(1)}h</span>
+        <span class="${over ? 'over' : ''}">Available: ${availHrs.toFixed(1)}h ${over ? '⚠ over':'✓'}</span>
+      </div>
+      <div class="prog-track" style="margin-bottom:12px;">
+        <div class="prog-fill ${over ? 'warn' : ''}" style="width:${pct.toFixed(0)}%"></div>
+      </div>`;
+
+    tasks.forEach(t => {
+      const isAct   = t.id === S.activeTaskId;
+      const isOvr   = t.dueDate && t.dueDate < today;
+      const ecDone  = (t.exitCriteriaDone||[]).filter(Boolean).length;
+      const ecTotal = (t.exitCriteria||[]).length;
+
+      html += `
+        <div class="day-task-card lc-${lcClass(t.priority)} ${isOvr?'overdue':''}"
+             onclick="openTaskSheet('${t.id}')">
+          <div class="dtc-left">
+            <div class="dtc-name">${esc(t.name)}</div>
+            <div class="dtc-pills">
+              <span class="pill p-${t.priority}">${pLabel(t.priority)}</span>
+              ${isAct ? '<span class="active-dot"></span>' : ''}
+              ${isOvr ? '<span class="pill" style="background:var(--danger2);color:var(--danger);">Overdue</span>' : ''}
+              ${(t.tags||[]).slice(0,1).map(tg=>`<span class="tag-chip">${esc(tg)}</span>`).join('')}
+              ${ecTotal ? `<span class="dod-badge ${ecDone===ecTotal?'c-done':''}">${ecDone}/${ecTotal} DoD</span>` : ''}
+            </div>
+            ${t.dueDate && t.dueDate !== dateStr ? `<div style="font-family:var(--mono);font-size:9px;color:var(--danger);margin-top:2px;">Due ${fmtDateStr(t.dueDate)}</div>` : ''}
+          </div>
+          <div class="dtc-right">
+            <div class="dtc-time">${t.estimatedHrs ? t.estimatedHrs+'h est' : '1h est'}</div>
+            <button class="unpin-btn" onclick="event.stopPropagation();pinToDay('${t.id}','${dateStr}')">×</button>
+          </div>
+        </div>`;
+    });
+  } else {
+    html += `<div class="empty"><div class="empty-icon">📅</div>No tasks scheduled for ${_dayView === 'today' ? 'today' : 'tomorrow'}.<br>Pin tasks from the backlog below.</div>`;
+  }
+
+  // Backlog
+  if (backlog.length) {
+    html += `<div class="sec-title">Backlog — add to ${_dayView === 'today' ? 'today' : 'tomorrow'}</div>`;
+    const pOrd = { critical:0, value:1, nice:2 };
+    backlog.sort((a,b) => pOrd[a.priority] - pOrd[b.priority]);
+
+    backlog.forEach(t => {
+      html += `
+        <div class="backlog-row" onclick="openTaskSheet('${t.id}')">
+          <span class="pill p-${t.priority}" style="flex-shrink:0;">${pLabel(t.priority)}</span>
+          <div class="backlog-name">${esc(t.name)}</div>
+          <div class="backlog-actions">
+            <button class="btn xs info" onclick="event.stopPropagation();pinToDay('${t.id}','${dateStr}')">
+              + ${_dayView === 'today' ? 'Today' : 'Tmrw'}
+            </button>
+          </div>
+        </div>`;
+    });
+  }
+
+  wrap.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════
 // RENDER — BUDGET TAB
-// ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 function renderBudget() {
-  const { totalHours, ptHours, miscHours, timerLimit } = S.settings;
+  const { totalHours, ptHours, miscHours, timerLimit, intervalCheckMins, intervalCheckEnabled } = S.settings;
   const focusHrs = totalHours - ptHours - miscHours;
 
   $('b-focus').textContent = focusHrs.toFixed(1) + 'h';
-  $('b-pt').textContent    = ptHours.toFixed(1) + 'h';
+  $('b-pt').textContent    = ptHours.toFixed(1)  + 'h';
   $('b-misc').textContent  = miscHours.toFixed(1) + 'h';
 
-  // Sync settings inputs
-  $('s-total').value = totalHours;
-  $('s-pt').value    = ptHours;
-  $('s-misc').value  = miscHours;
-  $('s-timer').value = timerLimit || 90;
+  $('s-total').value   = totalHours;
+  $('s-pt').value      = ptHours;
+  $('s-misc').value    = miscHours;
+  $('s-timer').value   = timerLimit  || 90;
+  $('s-ic-mins').value = intervalCheckMins || 60;
+  $('ic-toggle').checked = !!intervalCheckEnabled;
 
-  // Used time this week
-  const wkSessions  = S.sessions.filter(s => s.weekStart === S.weekStart);
-  const totalMinUsed = wkSessions.reduce((sum, s) => sum + (s.durationMins || 0), 0);
-  const hrsUsed     = (totalMinUsed / 60);
-  const pct         = Math.min((hrsUsed / focusHrs) * 100, 100);
+  const wkMinsUsed = S.sessions
+    .filter(s => s.weekStart === S.weekStart)
+    .reduce((sum, s) => sum + (s.durationMins||0), 0);
+  const hrsUsed = wkMinsUsed / 60;
+  const pct     = Math.min((hrsUsed / focusHrs) * 100, 100);
 
   $('b-used-lbl').textContent = hrsUsed.toFixed(1) + ' / ' + focusHrs.toFixed(1) + 'h';
   $('b-prog').style.width     = pct.toFixed(1) + '%';
 
   // Daily log
   const log = $('daily-log');
-
-  if (wkSessions.length === 0) {
-    log.innerHTML = '<div style="font-size:13px;color:var(--text3);text-align:center;padding:18px 0;">No sessions this week yet.</div>';
-    return;
-  }
-
-  // Group by day
-  const byDay = {};
-  wkSessions.forEach(s => {
-    const day = s.start.slice(0, 10);
-    (byDay[day] = byDay[day] || []).push(s);
-  });
-
-  let html = '';
-  Object.keys(byDay).sort().reverse().forEach(day => {
-    const dayMins = byDay[day].reduce((sum, s) => sum + (s.durationMins || 0), 0);
-    html += `<div class="day-group-header">
-               <span>${fmtDate(day)}</span>
-               <span>${fmtMins(dayMins)} total</span>
-             </div>`;
-    byDay[day].forEach(s => {
-      html += `<div class="log-entry">
-                 <div class="log-name">${esc(s.taskName)}</div>
-                 <div class="log-dur">${fmtMins(s.durationMins)}</div>
-               </div>`;
+  const wkSessions = S.sessions.filter(s => s.weekStart === S.weekStart);
+  if (!wkSessions.length) {
+    log.innerHTML = '<div style="font-size:13px;color:var(--text3);text-align:center;padding:16px 0;">No sessions this week yet.</div>';
+  } else {
+    const byDay = {};
+    wkSessions.forEach(s => {
+      const day = s.start.slice(0,10);
+      (byDay[day] = byDay[day] || []).push(s);
     });
-  });
-
-  log.innerHTML = html;
+    let html = '';
+    Object.keys(byDay).sort().reverse().forEach(day => {
+      const dayMins = byDay[day].reduce((sum, s) => sum + (s.durationMins||0), 0);
+      html += `<div class="day-group-hdr"><span>${fmtDateStr(day)}</span><span>${fmtMins(dayMins)}</span></div>`;
+      byDay[day].forEach(s => {
+        html += `<div class="log-entry"><div class="log-name">${esc(s.taskName)}</div><div class="log-dur">${fmtMins(s.durationMins)}</div></div>`;
+      });
+    });
+    log.innerHTML = html;
+  }
 }
 
-// ─────────────────────────────────────────────────────────
-// RENDER — ARCHIVE TAB
-// ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+// RENDER — ARCHIVE
+// ═══════════════════════════════════════════════════════
 function renderArchive() {
+  // Parked obs
+  const poWrap = $('po-list-wrap');
+  if (!S.parkedObs.length) {
+    poWrap.innerHTML = `<div class="empty" style="padding:16px 0;"><div class="empty-icon">🔍</div>No parked observations. Log one from the Focus or Tasks tab.</div>`;
+  } else {
+    poWrap.innerHTML = S.parkedObs.map(po => {
+      const src = po.sourceTaskId ? S.tasks.find(t => t.id === po.sourceTaskId) : null;
+      return `
+        <div class="po-card" onclick="openPoSheet('${po.id}')">
+          <div class="po-title">${esc(po.title)}</div>
+          <div class="po-meta">
+            ${po.projectTag ? `<span>${esc(po.projectTag)}</span>` : ''}
+            <span>${fmtDateStr(po.createdAt)}</span>
+            ${src ? `<span>from: ${esc(src.name.slice(0,30))}</span>` : ''}
+          </div>
+          ${po.desc ? `<div class="po-desc">${esc(po.desc.slice(0,120))}${po.desc.length>120?'…':''}</div>` : ''}
+        </div>`;
+    }).join('');
+  }
+
+  // Completed tasks
   const done = [...S.tasks]
     .filter(t => t.status === 'done')
-    .sort((a, b) => new Date(b.doneAt || b.createdAt) - new Date(a.doneAt || a.createdAt));
+    .sort((a,b) => new Date(b.doneAt||b.createdAt) - new Date(a.doneAt||a.createdAt));
 
-  const wrap = $('archive-wrap');
-
-  if (done.length === 0) {
-    wrap.innerHTML = `<div class="empty"><div class="e-icon">🗂</div><p>No completed tasks yet.<br>Mark tasks done from the Focus tab.</p></div>`;
+  const archWrap = $('archive-wrap');
+  if (!done.length) {
+    archWrap.innerHTML = `<div class="empty"><div class="empty-icon">🗂</div>No completed tasks yet.</div>`;
     return;
   }
 
-  wrap.innerHTML = done.map(t => `
-    <div class="archive-row" onclick="openSheet('${t.id}')">
-      <div class="archive-name">${esc(t.name)}</div>
-      <div class="archive-meta">
-        <span class="pill p-${t.priority}">${pLabel(t.priority)}</span>
-        ${t.doneAt  ? fmtDate(t.doneAt.slice(0, 10))    : ''}
-        ${t.totalMins ? ' · ' + fmtMins(t.totalMins)    : ''}
-      </div>
-      ${t.notes ? `<div class="archive-notes">${esc(t.notes.slice(0, 120))}${t.notes.length > 120 ? '…' : ''}</div>` : ''}
-    </div>`
-  ).join('');
+  archWrap.innerHTML = done.map(t => {
+    const ecDone  = (t.exitCriteriaDone||[]).filter(Boolean).length;
+    const ecTotal = (t.exitCriteria||[]).length;
+    return `
+      <div class="archive-row" onclick="openTaskSheet('${t.id}')">
+        <div class="archive-name">${esc(t.name)}</div>
+        <div class="archive-meta">
+          <span class="pill p-${t.priority}">${pLabel(t.priority)}</span>
+          ${t.doneAt ? fmtDateStr(t.doneAt.slice(0,10)) : ''}
+          ${t.totalMins ? ' · ' + fmtMins(t.totalMins) : ''}
+          ${ecTotal ? ` · DoD: ${ecDone}/${ecTotal}` : ''}
+          ${(t.tags||[]).slice(0,2).map(tg=>`<span class="tag-chip">${esc(tg)}</span>`).join('')}
+        </div>
+        ${t.notes ? `<div class="archive-notes">${esc(t.notes.slice(0,100))}${t.notes.length>100?'…':''}</div>` : ''}
+      </div>`;
+  }).join('');
 }
 
-// ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 // PERFORMANCE SUMMARY EXPORT
-// ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 function genExport() {
   const done = [...S.tasks]
     .filter(t => t.status === 'done')
-    .sort((a, b) => new Date(b.doneAt || b.createdAt) - new Date(a.doneAt || a.createdAt));
+    .sort((a,b) => new Date(b.doneAt||b.createdAt) - new Date(a.doneAt||a.createdAt));
 
   const now     = new Date();
-  const dateStr = now.toLocaleDateString('en-AU', { day: '2-digit', month: 'long', year: 'numeric' });
+  const dateStr = now.toLocaleDateString('en-AU', { day:'2-digit', month:'long', year:'numeric' });
   const sep     = '═'.repeat(52);
   const dash    = '─'.repeat(44);
 
-  let out = `INTERNAL AUDIT — PERFORMANCE SUMMARY\n`;
-  out += `Generated: ${dateStr}\n`;
-  out += sep + '\n\n';
+  let out = `INTERNAL AUDIT — PERFORMANCE SUMMARY\nGenerated: ${dateStr}\n${sep}\n\n`;
 
-  const sections = [
-    { label: 'CRITICAL DELIVERABLES',  key: 'critical', tasks: done.filter(t => t.priority === 'critical')  },
-    { label: 'VALUE-ADD ACTIVITIES',   key: 'value',    tasks: done.filter(t => t.priority === 'value')     },
-    { label: 'ADDITIONAL TASKS',       key: 'nice',     tasks: done.filter(t => t.priority === 'nice')      }
-  ];
-
-  sections.forEach(sec => {
-    if (sec.tasks.length === 0) return;
+  [
+    { label:'CRITICAL DELIVERABLES',  tasks: done.filter(t => t.priority==='critical') },
+    { label:'VALUE-ADD ACTIVITIES',   tasks: done.filter(t => t.priority==='value')    },
+    { label:'ADDITIONAL TASKS',       tasks: done.filter(t => t.priority==='nice')     }
+  ].forEach(sec => {
+    if (!sec.tasks.length) return;
     out += `${sec.label} (${sec.tasks.length})\n${dash}\n`;
     sec.tasks.forEach((t, i) => {
-      out += `${i + 1}. ${t.name}\n`;
-      if (t.totalMins)  out += `   Time logged:  ${fmtMins(t.totalMins)}\n`;
-      if (t.doneAt)     out += `   Completed:    ${fmtDate(t.doneAt.slice(0,10))}\n`;
-      if (t.notes)      out += `   Notes:        ${t.notes}\n`;
+      out += `${i+1}. ${t.name}\n`;
+      if (t.tags && t.tags.length)  out += `   Tags:       ${t.tags.join(', ')}\n`;
+      if (t.totalMins)              out += `   Time:       ${fmtMins(t.totalMins)}\n`;
+      if (t.doneAt)                 out += `   Completed:  ${fmtDateStr(t.doneAt.slice(0,10))}\n`;
+      // Exit criteria summary
+      if (t.exitCriteria && t.exitCriteria.length) {
+        const ecDone = (t.exitCriteriaDone||[]).filter(Boolean).length;
+        out += `   DoD:        ${ecDone}/${t.exitCriteria.length} criteria met\n`;
+        t.exitCriteria.forEach((c, ci) => {
+          const chk = (t.exitCriteriaDone||[])[ci] ? '✓' : '○';
+          out += `                ${chk} ${c}\n`;
+        });
+      }
+      if (t.notes)                  out += `   Notes:      ${t.notes}\n`;
       out += '\n';
     });
   });
 
-  // Extension log (accountability transparency)
-  if (S.extensions.length > 0) {
-    out += `HYPERFOCUS EXTENSIONS LOGGED (${S.extensions.length})\n${dash}\n`;
-    S.extensions.forEach((e, i) => {
-      const task = S.tasks.find(t => t.id === e.taskId);
-      out += `${i + 1}. ${task ? task.name : 'Unknown task'}\n`;
-      out += `   Reason:  ${e.reason}\n`;
-      out += `   At:      ${new Date(e.at).toLocaleString('en-AU')}\n\n`;
+  // Parked observations summary
+  if (S.parkedObs.length) {
+    out += `PARKED OBSERVATIONS — FOR FUTURE REVIEW (${S.parkedObs.length})\n${dash}\n`;
+    S.parkedObs.forEach((po, i) => {
+      out += `${i+1}. ${po.title}\n`;
+      if (po.projectTag) out += `   Project: ${po.projectTag}\n`;
+      if (po.desc)       out += `   Note:    ${po.desc}\n`;
+      out += '\n';
     });
   }
 
-  // Totals
-  const totalMins  = done.reduce((sum, t) => sum + (t.totalMins || 0), 0);
-  const critical   = done.filter(t => t.priority === 'critical').length;
-  const valueAdd   = done.filter(t => t.priority === 'value').length;
-  const other      = done.filter(t => t.priority === 'nice').length;
-
-  out += sep + '\n';
-  out += `SUMMARY\n`;
-  out += `Tasks completed:  ${done.length}\n`;
-  out += `Critical:         ${critical}\n`;
-  out += `Value-Add:        ${valueAdd}\n`;
-  out += `Additional:       ${other}\n`;
-  if (totalMins > 0) {
-    out += `Total time logged: ${fmtMins(totalMins)}\n`;
+  // Extension log
+  if (S.extensions.length) {
+    out += `HYPERFOCUS EXTENSIONS LOGGED (${S.extensions.length})\n${dash}\n`;
+    S.extensions.forEach((e, i) => {
+      const t = S.tasks.find(x => x.id === e.taskId);
+      out += `${i+1}. ${t ? t.name : 'Unknown task'}\n   Reason: ${e.reason}\n   At: ${new Date(e.at).toLocaleString('en-AU')}\n\n`;
+    });
   }
+
+  const totalMins = done.reduce((sum, t) => sum + (t.totalMins||0), 0);
+  out += `${sep}\nSUMMARY\nTotal completed: ${done.length} tasks\n`;
+  out += `Critical: ${done.filter(t=>t.priority==='critical').length}  Value-Add: ${done.filter(t=>t.priority==='value').length}  Other: ${done.filter(t=>t.priority==='nice').length}\n`;
+  if (totalMins) out += `Total time logged: ${fmtMins(totalMins)}\n`;
+  out += `Parked observations: ${S.parkedObs.length}\n`;
 
   $('export-text').textContent = out;
   $('export-wrap').style.display = 'block';
@@ -1706,137 +2586,94 @@ function copyExport() {
   const text = $('export-text').textContent;
   navigator.clipboard.writeText(text)
     .then(() => toast('Copied to clipboard'))
-    .catch(() => toast('Select the text above to copy'));
+    .catch(() => toast('Select text above to copy manually'));
 }
 
-// ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 // UTILITIES
-// ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 function $(id) { return document.getElementById(id); }
 
-function esc(str) {
-  return String(str || '')
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function fmtMins(m) {
-  m = Math.round(m || 0);
-  if (m < 1)  return '< 1m';
-  if (m < 60) return `${m}m`;
-  return `${Math.floor(m/60)}h ${m % 60}m`;
-}
-
-function fmtDate(str) {
-  if (!str) return '';
-  const d = new Date(str.length === 10 ? str + 'T00:00:00' : str);
-  return d.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
-}
-
-function pLabel(p) {
-  return { critical: 'Critical', value: 'Value-Add', nice: 'Nice-to-Have' }[p] || p;
-}
-
-function sLabel(s) {
-  return { 'not-started': 'Not Started', 'in-progress': 'In Progress', done: 'Done' }[s] || s;
-}
+function pLabel(p)  { return { critical:'Critical', value:'Value-Add', nice:'Nice-to-Have' }[p] || p; }
+function sLabel(s)  { return { 'not-started':'Not Started','in-progress':'In Progress', done:'Done' }[s] || s; }
+function lcClass(p) { return { critical:'crit', value:'val', nice:'nice' }[p] || 'nice'; }
 
 function getFocusHrsLeft() {
   const { totalHours, ptHours, miscHours } = S.settings;
   const focusHrs   = totalHours - ptHours - miscHours;
-  const wkMinsUsed = S.sessions
-    .filter(s => s.weekStart === S.weekStart)
-    .reduce((sum, s) => sum + (s.durationMins || 0), 0);
+  const wkMinsUsed = S.sessions.filter(s => s.weekStart === S.weekStart).reduce((sum,s) => sum + (s.durationMins||0), 0);
   return Math.max(0, focusHrs - wkMinsUsed / 60);
 }
 
-function toast(msg, duration = 2200) {
+let _toastTimer;
+function toast(msg, dur = 2400) {
   const el = $('toast');
   el.textContent = msg;
   el.classList.add('show');
-  clearTimeout(toast._t);
-  toast._t = setTimeout(() => el.classList.remove('show'), duration);
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), dur);
 }
 
-// ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 // TAB SWITCHING
-// ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 function switchTab(name) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   $('pane-' + name).classList.add('active');
   document.querySelector(`.tab-btn[onclick="switchTab('${name}')"]`).classList.add('active');
-
   if (name === 'budget')  renderBudget();
   if (name === 'archive') renderArchive();
   if (name === 'tasks')   renderTaskList();
+  if (name === 'day')     renderDayView();
 }
 
-// ─────────────────────────────────────────────────────────
-// PWA — SERVICE WORKER (inline blob for single-file hosting)
-// ─────────────────────────────────────────────────────────
-// NOTE FOR GITHUB PAGES DEPLOY:
-// For the "Add to Home Screen" install prompt on Android,
-// create a file called sw.js in your repo root with these contents,
-// then change the registration below to:
-//   navigator.serviceWorker.register('/sw.js')
-//
-// sw.js contents:
-// ─────────────────────────────────────────────────────────
-const SW_CODE = `
-const CACHE = 'balancer-v3';
-const URLS  = ['/'];
-self.addEventListener('install',  e => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(URLS))); });
-self.addEventListener('activate', e => e.waitUntil(clients.claim()));
-self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
-  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(res => {
-    const clone = res.clone();
-    caches.open(CACHE).then(c => c.put(e.request, clone));
-    return res;
-  })));
-});
-`;
-
+// ═══════════════════════════════════════════════════════
+// PWA — SERVICE WORKER
+// Reads from /sw.js in repo root (place sw.js file there)
+// ═══════════════════════════════════════════════════════
 if ('serviceWorker' in navigator) {
-  const blob = new Blob([SW_CODE], { type: 'application/javascript' });
-  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
 }
 
-// ─────────────────────────────────────────────────────────
-// PWA MANIFEST (inline — works without a separate file)
-// ─────────────────────────────────────────────────────────
+// PWA Manifest (inline)
 (function() {
   const m = {
-    name:             'The Balancer',
-    short_name:       'Balancer',
-    description:      'ADHD-friendly internal audit productivity tool',
-    start_url:        '/',
-    display:          'standalone',
-    background_color: '#141311',
-    theme_color:      '#0A5740',
-    orientation:      'portrait',
+    name: 'The Balancer', short_name: 'Balancer',
+    description: 'ADHD-friendly internal audit productivity',
+    start_url: './', display: 'standalone',
+    background_color: '#141311', theme_color: '#0A5740',
+    orientation: 'portrait',
     icons: [{
-      src:   "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230A5740'/><text y='.9em' font-size='72' x='12'>⚖</text></svg>",
-      sizes: '192x192',
-      type:  'image/svg+xml'
+      src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230A5740'/><text y='.9em' font-size='72' x='10'>⚖</text></svg>",
+      sizes:'192x192', type:'image/svg+xml'
     }]
   };
-  const link  = document.createElement('link');
-  link.rel    = 'manifest';
-  link.href   = URL.createObjectURL(new Blob([JSON.stringify(m)], { type: 'application/manifest+json' }));
+  const link = document.createElement('link');
+  link.rel   = 'manifest';
+  link.href  = URL.createObjectURL(new Blob([JSON.stringify(m)], { type:'application/manifest+json' }));
   document.head.appendChild(link);
 })();
 
-// ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 // BOOT
-// ─────────────────────────────────────────────────────────
-load();           // restore state from localStorage
-renderFocus();    // paint focus tab (default)
-renderTaskList(); // pre-render tasks
+// ═══════════════════════════════════════════════════════
+load();
+renderFocus();
+renderTaskList();
+$('wk-badge').textContent = 'WK ' + getWeekNum();
 
-// Resume live timer if app reloaded mid-session
+// Resume live timer if reloaded mid-session
 if (S.activeTaskId && S.activeStart) startTimer();
+
+// Start interval check engine
+startIntervalCheck();
 </script>
 </body>
 </html>
