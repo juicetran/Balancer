@@ -2674,6 +2674,62 @@ if (S.activeTaskId && S.activeStart) startTimer();
 
 // Start interval check engine
 startIntervalCheck();
+
+// ═══════════════════════════════════════════════════════
+// SWIPE NAVIGATION — scroll left/right between tabs
+// ═══════════════════════════════════════════════════════
+const TABS = ['focus', 'tasks', 'day', 'budget', 'archive'];
+
+function getCurrentTabIndex() {
+  const active = document.querySelector('.tab-pane.active');
+  if (!active) return 0;
+  return TABS.indexOf(active.id.replace('pane-', ''));
+}
+
+(function initSwipe() {
+  const app = document.getElementById('app');
+  let startX = 0, startY = 0, startTime = 0;
+  let locked = false; // locked to axis once determined
+
+  app.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    startX    = t.clientX;
+    startY    = t.clientY;
+    startTime = Date.now();
+    locked    = false;
+  }, { passive: true });
+
+  app.addEventListener('touchmove', e => {
+    if (!locked) {
+      const dx = Math.abs(e.touches[0].clientX - startX);
+      const dy = Math.abs(e.touches[0].clientY - startY);
+      // If moving more vertically than horizontally, ignore — let scroll work
+      if (dy > dx) { locked = true; startX = -1; return; }
+      if (dx > 8)   locked = true;
+    }
+  }, { passive: true });
+
+  app.addEventListener('touchend', e => {
+    if (startX === -1) return; // was a vertical scroll
+
+    const dx       = e.changedTouches[0].clientX - startX;
+    const dy       = e.changedTouches[0].clientY - startY;
+    const elapsed  = Date.now() - startTime;
+    const absX     = Math.abs(dx);
+    const absY     = Math.abs(dy);
+
+    // Must be: horizontal dominant, >45px travel, under 400ms, not inside a sheet
+    if (absX < 45)           return;
+    if (absY > absX * 0.75)  return; // too diagonal
+    if (elapsed > 400)       return;
+    if (document.querySelector('.sheet-overlay.open')) return;
+    if ($('ic-overlay').classList.contains('show'))    return;
+
+    const idx = getCurrentTabIndex();
+    if (dx < 0 && idx < TABS.length - 1) switchTab(TABS[idx + 1]); // swipe left  → next tab
+    if (dx > 0 && idx > 0)               switchTab(TABS[idx - 1]); // swipe right → prev tab
+  }, { passive: true });
+})();
 </script>
 </body>
 </html>
